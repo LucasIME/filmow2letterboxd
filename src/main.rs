@@ -13,10 +13,6 @@ impl FilmowClient {
         FilmowClient { user }
     }
 
-    fn get_user(&self) -> &str {
-        self.user
-    }
-
     fn get_watchlist_url(&self) -> String {
         format!("https://filmow.com/usuario/{}/filmes/quero-ver", self.user)
     }
@@ -30,7 +26,7 @@ impl FilmowClient {
         loop {
             match reqwest::get(self.get_watchlist_url_for_page(page_num).as_str()) {
                 Ok(i) => {
-                    if (i.status() == 404) {
+                    if i.status() == 404 {
                         break;
                     }
                     println!("Page number {}", page_num);
@@ -53,7 +49,7 @@ fn main() {
     let url = client.get_watchlist_url();
     client.iterate_through_pages();
 
-    let mut resp = reqwest::get(url.as_str()).unwrap();
+    let resp = reqwest::get(url.as_str()).unwrap();
     Document::from_read(resp).unwrap()
         .find(Name("a"))
         .filter(|n| has_attr_with_name(n, "data-movie-pk"))
