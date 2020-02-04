@@ -2,5 +2,14 @@ language: rust
 rust:
   - nightly
 script:
-  - cargo build --verbose --all
+  - cargo build --release --verbose --all
   - cargo test --verbose --all
+
+deploy:
+  provider: releases
+  api_key: $GITHUB_OAUTH 
+  file: target/release/filmow2letterboxd
+  skip_cleanup: true
+  on:
+    branch: master
+    tags: true
