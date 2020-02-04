@@ -122,17 +122,20 @@ impl FilmowClient {
             .unwrap();
     }
 
-    fn get_movie_from_url(&self, url: &str) -> Result<Movie, &str> {
+    fn get_movie_from_url(&self, url: &str) -> Result<Movie, String> {
         match reqwest::get(url) {
             Ok(mut resp) => {
                 if resp.status() == 404 {
-                    return Err("404 page not found");
+                    return Err(format!("404 page not found, when fetching for url {}", url));
                 }
 
                 let html_body = match resp.text() {
                     Ok(body) => body,
-                    _ => {
-                        return Err("Error when getting html body");
+                    Err(e) => {
+                        return Err(format!(
+                            "Error when getting html body for url {}. Error: {:?}",
+                            url, e
+                        ));
                     }
                 };
 
@@ -146,9 +149,10 @@ impl FilmowClient {
                     year: year,
                 });
             }
-            _ => {
-                return Err("Non Ok");
-            }
+            Err(e) => Err(format!(
+                "Reqwest error when fetching url {}. Error: {:?}",
+                url, e
+            )),
         }
     }
 
