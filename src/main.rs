@@ -132,6 +132,23 @@ impl FilmowClient {
         }
     }
 
+    fn parallel_process_links(&self, links: Vec<String>) -> Vec<Movie> {
+        let mut children = vec![];
+        for link in links {
+            children.push(thread::spawn(move || -> Movie {
+                FilmowClient::new().get_movie_from_url(&link).unwrap()
+            }));
+        }
+
+        let mut movies = vec![];
+        for child in children {
+            let movie = child.join().unwrap();
+            movies.push(movie);
+        }
+
+        return movies;
+    }
+
     fn get_all_movies_from_watchlist(&self, user: &str) -> Vec<Movie> {
         let mut resp = vec![];
         let mut page_num = 1;
@@ -140,7 +157,7 @@ impl FilmowClient {
                 .get_movie_links_from_url(self.get_watchlist_url_for_page(user, page_num).as_str())
             {
                 Ok(links) => {
-                    let mut page_movies = parallel_process_links(links);
+                    let mut page_movies = self.parallel_process_links(links);
                     println!("Movies for page {}: {:?}", page_num, page_movies);
                     resp.append(&mut page_movies);
                     page_num += 1;
@@ -160,7 +177,7 @@ impl FilmowClient {
                 .get_movie_links_from_url(self.get_watched_url_for_page(user, page_num).as_str())
             {
                 Ok(links) => {
-                    let mut page_movies = parallel_process_links(links);
+                    let mut page_movies = self.parallel_process_links(links);
                     println!("Movies for page {}: {:?}", page_num, page_movies);
                     resp.append(&mut page_movies);
                     page_num += 1;
@@ -174,23 +191,6 @@ impl FilmowClient {
 
 fn has_attr_with_name(node: &select::node::Node, name: &str) -> bool {
     node.attr(name).is_some()
-}
-
-fn parallel_process_links(links: Vec<String>) -> Vec<Movie> {
-    let mut children = vec![];
-    for link in links {
-        children.push(thread::spawn(move || -> Movie {
-            FilmowClient::new().get_movie_from_url(&link).unwrap()
-        }));
-    }
-
-    let mut movies = vec![];
-    for child in children {
-        let movie = child.join().unwrap();
-        movies.push(movie);
-    }
-
-    return movies;
 }
 
 fn save_movies_to_csv(movies: Vec<Movie>, file_name: &str) {
