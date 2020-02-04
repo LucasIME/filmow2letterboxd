@@ -1,0 +1,6 @@
+language: rust
+rust:
+  - nightly
+script:
+  - carbo build --verbose --all
+  - cargo test --verbose --all
