@@ -35,13 +35,19 @@ fn save_movies_to_csv(movies: Vec<Movie>, file_name: &str) -> Result<(), String>
 }
 
 fn main() {
-    let user = env::args().nth(1).unwrap();
+    let user = match env::args().nth(1) {
+        None => panic!("No arg was providaded as a username input"),
+        Some(user) => user,
+    };
+
     let client = FilmowClient::new();
+
     let watchlist_movies = client.get_all_movies_from_watchlist(user.as_str());
     match save_movies_to_csv(watchlist_movies, "watchlist.csv") {
         Err(e) => return println!("Error when saving watchlist: {:?}", e),
         _ => {}
     }
+
     let watched_movies = client.get_all_watched_movies(user.as_str());
     match save_movies_to_csv(watched_movies, "watched.csv") {
         Err(e) => return println!("Error when saving watched movies: {:?}", e),
