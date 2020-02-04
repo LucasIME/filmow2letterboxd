@@ -42,9 +42,16 @@ impl FilmowClient {
         )
     }
 
-    fn get_movie_links_from_page(&self, page_num: i32) -> Result<Vec<String>, &str> {
-        println!("Fetching links from User {} Page {}", self.user, page_num);
-        match reqwest::get(self.get_watchlist_url_for_page(page_num).as_str()) {
+    fn get_watched_url_for_page(&self, page: i32) -> String {
+        format!(
+            "https://filmow.com/usuario/{}/filmes/ja-vi/?pagina={}",
+            self.user, page
+        )
+    }
+
+    fn get_movie_links_from_url(&self, url: &str) -> Result<Vec<String>, &str> {
+        println!("Fetching links from Page {}", url);
+        match reqwest::get(url) {
             Ok(resp) => {
                 if resp.status() == 404 {
                     return Err("404 page not found");
@@ -111,9 +118,7 @@ impl FilmowClient {
                 };
 
                 let title = self.get_title(html_body.as_str());
-
                 let director = self.get_director(html_body.as_str());
-
                 let year = self.get_year(html_body.as_str());
 
                 return Ok(Movie {
@@ -126,6 +131,42 @@ impl FilmowClient {
                 return Err("Non Ok");
             }
         }
+    }
+
+    fn get_all_movies_from_watchlist(&self) -> Vec<Movie> {
+        let mut resp = vec![];
+        let mut page_num = 1;
+        loop {
+            match self.get_movie_links_from_url(self.get_watchlist_url_for_page(page_num).as_str())
+            {
+                Ok(links) => {
+                    let mut page_movies = parallel_process_links(links);
+                    println!("Movies for page {}: {:?}", page_num, page_movies);
+                    resp.append(&mut page_movies);
+                    page_num += 1;
+                }
+                _ => break,
+            }
+        }
+
+        return resp;
+    }
+
+    fn get_all_watched_movies(&self) -> Vec<Movie> {
+        let mut resp = vec![];
+        let mut page_num = 1;
+        loop {
+            match self.get_movie_links_from_url(self.get_watched_url_for_page(page_num).as_str()) {
+                Ok(links) => {
+                    let mut page_movies = parallel_process_links(links);
+                    println!("Movies for page {}: {:?}", page_num, page_movies);
+                    resp.append(&mut page_movies);
+                    page_num += 1;
+                }
+                _ => break,
+            }
+        }
+        return resp;
     }
 }
 
@@ -152,26 +193,8 @@ fn parallel_process_links(links: Vec<String>) -> Vec<Movie> {
     return movies;
 }
 
-fn get_all_movies_from_watchlist(client: &FilmowClient) -> Vec<Movie> {
-    let mut resp = vec!();
-    let mut page_num = 1;
-    loop {
-        match client.get_movie_links_from_page(page_num) {
-            Ok(links) => {
-                let mut page_movies = parallel_process_links(links);
-                println!("Movies for page {}: {:?}", page_num, page_movies);
-                resp.append(&mut page_movies);
-                page_num += 1;
-            }
-            _ => break,
-        }
-    }
-
-    return resp;
-}
-
-fn save_movies_to_csv(movies: Vec<Movie>) {
-    let mut wrt = Writer::from_path(".csv").unwrap();
+fn save_movies_to_csv(movies: Vec<Movie>, file_name: &str) {
+    let mut wrt = Writer::from_path(file_name).unwrap();
     wrt.write_record(&["Title", "Directors", "Year"]);
     for movie in movies.iter() {
         wrt.write_record(movie.to_csvable_array());
@@ -182,7 +205,8 @@ fn save_movies_to_csv(movies: Vec<Movie>) {
 fn main() {
     let user = "lucasmeireles33";
     let client = FilmowClient::new(user);
-    let movies = get_all_movies_from_watchlist(&client);
-    println!("{:?}", movies);
-    save_movies_to_csv(movies);
+    let watchlist_movies = client.get_all_movies_from_watchlist();
+    save_movies_to_csv(watchlist_movies, "watchlist.csv");
+    let watched_movies = client.get_all_watched_movies();
+    save_movies_to_csv(watched_movies, "watched.csv");
 }
