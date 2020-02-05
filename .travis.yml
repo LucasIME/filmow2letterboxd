@@ -18,11 +18,6 @@ matrix:
       os: osx
       rust: nightly
 
-    # Windows
-    - env: TARGET=x86_64-pc-windows-gnu
-      os: windows
-      rust: nightly
-
 before_install:
   - set -e
   - rustup self update
@@ -44,8 +39,7 @@ deploy:
   file_glob: true
   file: $CRATE_NAME-$TRAVIS_TAG-$TARGET.*
   on:
-    tags: false
-    branch: master
+    tags: true
   provider: releases
   skip_cleanup: true
 

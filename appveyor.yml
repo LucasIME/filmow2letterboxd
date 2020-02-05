@@ -5,12 +5,6 @@ environment:
     CRATE_NAME: filmow2letterboxd
 
   matrix:
-    # Linux
-    - TARGET: x86_64-unknown-linux-gnu
-
-    # OSX
-    - TARGET: x86_64-apple-darwin
-
     # Windows
     - TARGET: x86_64-pc-windows-gnu
 
@@ -45,7 +39,7 @@ deploy:
   description: ''
   on:
     RUST_VERSION: nightly
-    appveyor_repo_tag: false
+    appveyor_repo_tag: true
   provider: GitHub
 
 cache:
