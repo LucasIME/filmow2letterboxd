@@ -1,5 +1,7 @@
 use csv::Writer;
 use std::env;
+use std::io;
+use std::io::prelude::*;
 
 mod filmowclient;
 use filmowclient::FilmowClient;
@@ -36,7 +38,15 @@ fn save_movies_to_csv(movies: Vec<Movie>, file_name: &str) -> Result<(), String>
 
 fn main() {
     let user = match env::args().nth(1) {
-        None => panic!("No arg was providaded as a username input"),
+        None => {
+            print!("Please, enter the your Filmow username: ");
+            io::stdout().flush().unwrap();
+            let mut user_input = String::new();
+            io::stdin()
+                .read_line(&mut user_input)
+                .expect("Failed to read user input");
+            user_input
+        }
         Some(user) => user,
     };
 
