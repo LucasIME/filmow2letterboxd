@@ -1,7 +1,6 @@
 dist: trusty
 language: rust
 services: docker
-sudo: required
 
 env:
   global:
@@ -51,4 +50,4 @@ before_cache:
 branches:
   only:
     - master
-    - /^v\d+\.\d+\.\d+.*$/
+    - /^\d+\.\d+\.\d+.*$/

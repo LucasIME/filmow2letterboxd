@@ -49,7 +49,7 @@ cache:
 branches:
   only:
     # Release tags
-    - /^v\d+\.\d+\.\d+.*$/
+    - /^\d+\.\d+\.\d+.*$/
     - master
 
 # Building is done in the test phase, so we disable Appveyor's build phase.
