@@ -51,16 +51,31 @@ fn main() {
     };
 
     let client = FilmowClient::new();
+    let watchlist_file_name = "watchlist.csv";
+    let watched_movies_file_name = "watched.csv";
 
     let watchlist_movies = client.get_all_movies_from_watchlist(user.as_str());
-    match save_movies_to_csv(watchlist_movies, "watchlist.csv") {
+    match save_movies_to_csv(watchlist_movies, watchlist_file_name) {
         Err(e) => return println!("Error when saving watchlist: {:?}", e),
-        _ => {}
+        _ => println!(
+            "Successfully generated watchlist file: {}",
+            watchlist_file_name
+        ),
     }
 
     let watched_movies = client.get_all_watched_movies(user.as_str());
-    match save_movies_to_csv(watched_movies, "watched.csv") {
+    match save_movies_to_csv(watched_movies, watched_movies_file_name) {
         Err(e) => return println!("Error when saving watched movies: {:?}", e),
-        _ => {}
+        _ => println!(
+            "Successfully generated watched movies file: {}",
+            watched_movies_file_name
+        ),
     }
+
+    println!(
+        "Filmow2letterboxed has finished importing your Filmow profile! \
+         You should be able to find .csv files in the same directory of the executable. \
+         For more instructions on how to import these files to letterboxd, \
+         go to https://github.com/LucasIME/filmow2letterboxd"
+    );
 }

@@ -12,6 +12,7 @@ impl FilmowClient {
     }
 
     pub fn get_all_movies_from_watchlist(&self, user: &str) -> Vec<Movie> {
+        println!("Fetching watchlist for user {}", user);
         let mut resp = vec![];
         let mut page_num = 1;
         loop {
@@ -32,6 +33,7 @@ impl FilmowClient {
     }
 
     pub fn get_all_watched_movies(&self, user: &str) -> Vec<Movie> {
+        println!("Fetching watched movies for user {}", user);
         let mut resp = vec![];
         let mut page_num = 1;
         loop {
