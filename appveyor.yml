@@ -46,7 +46,7 @@ deploy:
   description: ''
   on:
     RUST_VERSION: nightly
-    appveyor_repo_tag: true
+    appveyor_repo_tag: false
   provider: GitHub
 
 cache:
