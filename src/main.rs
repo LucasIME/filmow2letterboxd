@@ -8,7 +8,8 @@ use filmowclient::FilmowClient;
 use filmowclient::Movie;
 
 fn save_movies_to_csv(movies: Vec<Movie>, file_name: &str) -> Result<(), String> {
-    let mut wrt = Writer::from_path(file_name).unwrap();
+    let mut wrt = Writer::from_path(file_name)
+        .expect(format!("Could not create CSV Writer for file {}", file_name).as_str());
     match wrt.write_record(&["Title", "Directors", "Year"]) {
         Err(e) => {
             return Err(format!(
@@ -40,7 +41,7 @@ fn main() {
     let user = match env::args().nth(1) {
         None => {
             print!("Please, enter the your Filmow username: ");
-            io::stdout().flush().unwrap();
+            io::stdout().flush().expect("could not flush stdout");
             let mut user_input = String::new();
             io::stdin()
                 .read_line(&mut user_input)

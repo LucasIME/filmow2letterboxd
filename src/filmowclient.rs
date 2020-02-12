@@ -79,7 +79,7 @@ impl FilmowClient {
                 }
 
                 Ok(Document::from_read(resp)
-                    .unwrap()
+                    .expect("could not create html document parsers from reqwest response")
                     .find(Name("a"))
                     .filter(|n| has_attr_with_name(n, "data-movie-pk"))
                     .map(|n| n.attr("href"))
@@ -101,7 +101,7 @@ impl FilmowClient {
             })
             .map(|n| n.text())
             .nth(0)
-            .unwrap();
+            .expect("Could not extract title for movie");
     }
 
     fn extract_director(&self, resp: &str) -> String {
@@ -110,7 +110,7 @@ impl FilmowClient {
             .filter(|n| n.attr("itemprop").is_some() && n.attr("itemprop").unwrap() == "director")
             .map(|n| n.text().trim().to_string())
             .nth(0)
-            .unwrap();
+            .expect("Could not extract director for movie");
     }
 
     fn extract_year(&self, resp: &str) -> u32 {
@@ -119,9 +119,9 @@ impl FilmowClient {
             .filter(|n| n.attr("class").is_some() && n.attr("class").unwrap() == "release")
             .map(|n| n.text())
             .nth(0)
-            .unwrap()
+            .expect("Could not find year string for movie")
             .parse::<u32>()
-            .unwrap();
+            .expect("Could not parse year string into u32");
     }
 
     fn get_movie_from_url(&self, url: &str) -> Result<Movie, String> {
@@ -162,13 +162,15 @@ impl FilmowClient {
         let mut children = vec![];
         for link in links {
             children.push(thread::spawn(move || -> Movie {
-                FilmowClient::new().get_movie_from_url(&link).unwrap()
+                FilmowClient::new()
+                    .get_movie_from_url(&link)
+                    .expect(format!("Could not get movie from url {}", link).as_str())
             }));
         }
 
         let mut movies = vec![];
         for child in children {
-            let movie = child.join().unwrap();
+            let movie = child.join().expect("Could not join child thread");
             movies.push(movie);
         }
 
