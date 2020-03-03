@@ -3,6 +3,9 @@ use select::document::Document;
 use select::predicate::Name;
 use std::thread;
 
+mod movieextractor;
+use movieextractor::MovieExtractor;
+
 #[derive(Debug)]
 pub struct FilmowClient {}
 
@@ -93,37 +96,6 @@ impl FilmowClient {
         }
     }
 
-    fn extract_title(&self, resp: &str) -> String {
-        return Document::from(resp)
-            .find(Name("h2"))
-            .filter(|n| {
-                n.attr("class").is_some() && n.attr("class").unwrap() == "movie-original-title"
-            })
-            .map(|n| n.text())
-            .nth(0)
-            .expect("Could not extract title for movie");
-    }
-
-    fn extract_director(&self, resp: &str) -> String {
-        return Document::from(resp)
-            .find(Name("span"))
-            .filter(|n| n.attr("itemprop").is_some() && n.attr("itemprop").unwrap() == "director")
-            .map(|n| n.text().trim().to_string())
-            .nth(0)
-            .expect("Could not extract director for movie");
-    }
-
-    fn extract_year(&self, resp: &str) -> u32 {
-        return Document::from(resp)
-            .find(Name("small"))
-            .filter(|n| n.attr("class").is_some() && n.attr("class").unwrap() == "release")
-            .map(|n| n.text())
-            .nth(0)
-            .expect("Could not find year string for movie")
-            .parse::<u32>()
-            .expect("Could not parse year string into u32");
-    }
-
     fn get_movie_from_url(&self, url: &str) -> Result<Movie, String> {
         match reqwest::get(url) {
             Ok(mut resp) => {
@@ -141,15 +113,7 @@ impl FilmowClient {
                     }
                 };
 
-                let title = self.extract_title(html_body.as_str());
-                let director = self.extract_director(html_body.as_str());
-                let year = self.extract_year(html_body.as_str());
-
-                return Ok(Movie {
-                    title: title,
-                    director: director,
-                    year: year,
-                });
+                return MovieExtractor::extract_movie_from_html(html_body.as_str());
             }
             Err(e) => Err(format!(
                 "Reqwest error when fetching url {}. Error: {:?}",
