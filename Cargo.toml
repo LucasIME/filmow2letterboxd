@@ -1,6 +1,6 @@
 [package]
 name = "filmow2letterboxd"
-version = "0.2.1"
+version = "0.2.3"
 authors = ["Lucas Meireles"]
 edition = "2018"
 
