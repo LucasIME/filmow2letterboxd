@@ -113,7 +113,7 @@ impl FilmowClient {
                     }
                 };
 
-                return MovieExtractor::extract_movie_from_html(html_body.as_str());
+                return MovieExtractor::extract_movie_from_html(html_body.as_str(), url);
             }
             Err(e) => Err(format!(
                 "Reqwest error when fetching url {}. Error: {:?}",
@@ -125,10 +125,15 @@ impl FilmowClient {
     fn parallel_process_links(&self, links: Vec<String>) -> Vec<Movie> {
         let mut children = vec![];
         for link in links {
-            children.push(thread::spawn(move || -> Movie {
-                FilmowClient::new()
-                    .get_movie_from_url(&link)
-                    .expect(format!("Could not get movie from url {}", link).as_str())
+            children.push(thread::spawn(move || -> Option<Movie> {
+                match FilmowClient::new()
+                    .get_movie_from_url(&link) {
+                        Ok(movie) => Some(movie),
+                        Err(e) => {
+                            println!("Could not construct movie from url {}. Ignoring it and continuing. Error was: {}", link, e);
+                            return None;
+                        }
+                    }
             }));
         }
 
@@ -138,7 +143,7 @@ impl FilmowClient {
             movies.push(movie);
         }
 
-        return movies;
+        return movies.into_iter().flatten().collect();
     }
 }
 
