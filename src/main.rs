@@ -2,6 +2,7 @@ use csv::Writer;
 use std::env;
 use std::io;
 use std::io::prelude::*;
+use tokio::prelude::*;
 
 mod filmowclient;
 use filmowclient::FilmowClient;
@@ -37,7 +38,8 @@ fn save_movies_to_csv(movies: Vec<Movie>, file_name: &str) -> Result<(), String>
     Ok(())
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let user = match env::args().nth(1) {
         None => {
             print!("Please, enter the your Filmow username: ");
@@ -55,8 +57,8 @@ fn main() {
     let watchlist_file_name = "watchlist.csv";
     let watched_movies_file_name = "watched.csv";
 
-    let watchlist_movies = client.get_all_movies_from_watchlist(user.as_str());
-    match save_movies_to_csv(watchlist_movies, watchlist_file_name) {
+    let watchlist_movies = FilmowClient::get_all_movies_from_watchlist(user.as_str());
+    match save_movies_to_csv(watchlist_movies.await, watchlist_file_name) {
         Err(e) => return println!("Error when saving watchlist: {:?}", e),
         _ => println!(
             "Successfully generated watchlist file: {}",
@@ -64,8 +66,8 @@ fn main() {
         ),
     }
 
-    let watched_movies = client.get_all_watched_movies(user.as_str());
-    match save_movies_to_csv(watched_movies, watched_movies_file_name) {
+    let watched_movies = FilmowClient::get_all_watched_movies(user.as_str());
+    match save_movies_to_csv(watched_movies.await, watched_movies_file_name) {
         Err(e) => return println!("Error when saving watched movies: {:?}", e),
         _ => println!(
             "Successfully generated watched movies file: {}",

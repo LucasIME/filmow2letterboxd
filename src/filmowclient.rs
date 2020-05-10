@@ -14,96 +14,172 @@ impl FilmowClient {
         FilmowClient {}
     }
 
-    pub fn get_all_movies_from_watchlist(&self, user: &str) -> Vec<Movie> {
+    pub async fn get_all_movies_from_watchlist(user_c: &str) -> Vec<Movie> {
+        let user = user_c.to_string().clone();
         println!("Fetching watchlist for user {}", user);
-        let mut resp = vec![];
         let mut page_num = 1;
-        loop {
-            match self
-                .get_movie_links_from_url(self.get_watchlist_url_for_page(user, page_num).as_str())
-            {
-                Ok(links) => {
-                    let mut page_movies = self.parallel_process_links(links);
-                    println!("Movies for page {}: {:?}", page_num, page_movies);
-                    resp.append(&mut page_movies);
-                    page_num += 1;
-                }
-                _ => break,
+        let total_pages = FilmowClient::get_number_of_watchlist_pages(user_c).await;
+        println!("Total number of watchlist pages: {}", total_pages);
+
+        let mut links = vec![];
+        let mut children = vec![];
+        while page_num <= total_pages {
+            let cur_page = page_num;
+            let user_clone = user.clone();
+            children.push(tokio::spawn(async move {
+                let url = FilmowClient::get_watchlist_url_for_page(&user_clone, cur_page);
+                FilmowClient::get_movie_links_from_url(&url).await
+            }));
+            page_num += 1;
+        }
+
+        for child in children.iter_mut() {
+            let stored_resp = match child.await {
+                Ok(v) => v,
+                _ => panic!("failed joining tokio!!"),
+            };
+
+            match stored_resp {
+                Ok(mut link_v) => links.append(&mut link_v),
+                Err(e) => println!("Error with response! {}", e),
             }
         }
 
-        return resp;
+        let valid_links = links;
+
+        return FilmowClient::parallel_process_links(valid_links).await;
     }
 
-    pub fn get_all_watched_movies(&self, user: &str) -> Vec<Movie> {
+    pub async fn get_all_watched_movies(user_c: &str) -> Vec<Movie> {
+        let user = user_c.to_string().clone();
         println!("Fetching watched movies for user {}", user);
-        let mut resp = vec![];
         let mut page_num = 1;
-        loop {
-            match self
-                .get_movie_links_from_url(self.get_watched_url_for_page(user, page_num).as_str())
-            {
-                Ok(links) => {
-                    let mut page_movies = self.parallel_process_links(links);
-                    println!("Movies for page {}: {:?}", page_num, page_movies);
-                    resp.append(&mut page_movies);
-                    page_num += 1;
-                }
-                _ => break,
+        let total_pages = FilmowClient::get_number_of_watched_pages(user_c).await;
+        println!("Total number of watched pages: {}", total_pages);
+
+        let mut links = vec![];
+        let mut children = vec![];
+        while page_num <= total_pages {
+            let cur_page = page_num;
+            let user_clone = user.clone();
+            children.push(tokio::spawn(async move {
+                let url = FilmowClient::get_watched_url_for_page(&user_clone, cur_page);
+                FilmowClient::get_movie_links_from_url(&url).await
+            }));
+            page_num += 1;
+        }
+
+        for child in children.iter_mut() {
+            let stored_resp = match child.await {
+                Ok(v) => v,
+                _ => panic!("failed joining tokio!!"),
+            };
+
+            match stored_resp {
+                Ok(mut link_v) => links.append(&mut link_v),
+                Err(e) => println!("Error with response! {}", e),
             }
         }
-        return resp;
+
+        let valid_links = links;
+
+        return FilmowClient::parallel_process_links(valid_links).await;
     }
 
-    fn get_base_url(&self) -> String {
+    async fn get_number_of_watchlist_pages(user: &str) -> i32 {
+        let mut page_num = 1;
+        loop {
+            match FilmowClient::get_movie_links_from_url(
+                FilmowClient::get_watchlist_url_for_page(user, page_num).as_str(),
+            )
+            .await
+            {
+                Ok(links) => {
+                    page_num += 1;
+                }
+                _ => {
+                    page_num -= 1;
+                    break;
+                }
+            }
+        }
+        return page_num;
+    }
+
+    async fn get_number_of_watched_pages(user: &str) -> i32 {
+        let mut page_num = 1;
+        loop {
+            match FilmowClient::get_movie_links_from_url(
+                FilmowClient::get_watched_url_for_page(user, page_num).as_str(),
+            )
+            .await
+            {
+                Ok(links) => {
+                    page_num += 1;
+                }
+                _ => {
+                    page_num -= 1;
+                    break;
+                }
+            }
+        }
+        return page_num;
+    }
+
+    fn get_base_url() -> String {
         "https://filmow.com".to_string()
     }
 
-    fn get_watchlist_url_for_page(&self, user: &str, page: i32) -> String {
+    fn get_watchlist_url_for_page(user: &str, page: i32) -> String {
         format!(
             "https://filmow.com/usuario/{}/filmes/quero-ver/?pagina={}",
             user, page
         )
     }
 
-    fn get_watched_url_for_page(&self, user: &str, page: i32) -> String {
+    fn get_watched_url_for_page(user: &str, page: i32) -> String {
         format!(
             "https://filmow.com/usuario/{}/filmes/ja-vi/?pagina={}",
             user, page
         )
     }
 
-    fn get_movie_links_from_url(&self, url: &str) -> Result<Vec<String>, &str> {
+    async fn get_movie_links_from_url(url: &str) -> Result<Vec<String>, String> {
         println!("Fetching links from Page {}", url);
-        match reqwest::get(url) {
+        match reqwest::get(url).await {
             Ok(resp) => {
                 if resp.status() == 404 {
-                    return Err("404 page not found");
+                    return Err("404 page not found".to_string());
                 }
 
-                Ok(Document::from_read(resp)
-                    .expect("could not create html document parsers from reqwest response")
-                    .find(Name("a"))
-                    .filter(|n| has_attr_with_name(n, "data-movie-pk"))
-                    .map(|n| n.attr("href"))
-                    .flatten()
-                    .map(|x| self.get_base_url() + &x.to_string())
-                    .collect())
+                match resp.text().await {
+                    Ok(text) => Ok(Document::from(text.as_str())
+                        .find(Name("a"))
+                        .filter(|n| has_attr_with_name(n, "data-movie-pk"))
+                        .map(|n| n.attr("href"))
+                        .flatten()
+                        .map(|x| FilmowClient::get_base_url() + &x.to_string())
+                        .collect()),
+                    Err(e) => Err(format!(
+                        "Failed to get text from url, {}. Error was: {}",
+                        url, e
+                    )),
+                }
             }
             _ => {
-                return Err("Non Ok");
+                return Err("Non Ok".to_string());
             }
         }
     }
 
-    fn get_movie_from_url(&self, url: &str) -> Result<Movie, String> {
-        match reqwest::get(url) {
+    async fn get_movie_from_url(url: &str) -> Result<Movie, String> {
+        match reqwest::get(url).await {
             Ok(mut resp) => {
                 if resp.status() == 404 {
                     return Err(format!("404 page not found, when fetching for url {}", url));
                 }
 
-                let html_body = match resp.text() {
+                let html_body = match resp.text().await {
                     Ok(body) => body,
                     Err(e) => {
                         return Err(format!(
@@ -122,24 +198,25 @@ impl FilmowClient {
         }
     }
 
-    fn parallel_process_links(&self, links: Vec<String>) -> Vec<Movie> {
+    async fn parallel_process_links(links: Vec<String>) -> Vec<Movie> {
         let mut children = vec![];
         for link in links {
-            children.push(thread::spawn(move || -> Option<Movie> {
-                match FilmowClient::new()
-                    .get_movie_from_url(&link) {
+            children.push(
+                tokio::spawn(async move {
+                match FilmowClient::get_movie_from_url(&link).await {
                         Ok(movie) => Some(movie),
                         Err(e) => {
                             println!("Could not construct movie from url {}. Ignoring it and continuing. Error was: {}", link, e);
-                            return None;
+                            None
                         }
                     }
-            }));
+                })
+            );
         }
 
         let mut movies = vec![];
         for child in children {
-            let movie = child.join().expect("Could not join child thread");
+            let movie = child.await.expect("Could not join child thread");
             movies.push(movie);
         }
 
