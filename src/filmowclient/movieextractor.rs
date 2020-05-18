@@ -1,4 +1,6 @@
 use select::document::Document;
+use select::predicate::And;
+use select::predicate::Class;
 use select::predicate::Name;
 
 use crate::filmowclient::Movie;
@@ -63,25 +65,20 @@ impl MovieExtractor {
             });
     }
 
-    pub fn extract_watched_movie_infor(watched_movie_html: &str) -> WatchedMovieInformation {
-        let url = Document::from(watched_movie_html)
-        .find(select::predicate::Name("a"))
-        .flat_map(|n| n.attr("href"))
-        // .flatten()
-        .nth(0);
+    pub fn extract_watched_movie_info(watched_movie_html: &str) -> Option<WatchedMovieInformation> {
+        let document = Document::from(watched_movie_html);
+        let url = document.find(Name("a")).map(|n| n.attr("href")).nth(0);
 
-        let rating = Document::from(watched_movie_html)
-        // .find(|n| n.attr("data-original-title").is_some())
-        .find(select::predicate::Name("span"))
-        .flat_map(|n| n.attr("data-original-title"))
-        .flat_map(|s| s.split_ascii_whitespace().nth(1))
-        // .map(|s| s.map(|x|x.parse::<f32>()))
-        .flat_map(|s| s.parse::<f32>())
-        .nth(0);
+        let rating: Option<f32> = Document::from(watched_movie_html)
+            .find(And(Name("span"), Class("stars")))
+            .flat_map(|n| n.attr("title"))
+            .flat_map(|s| s.split_ascii_whitespace().nth(1))
+            .flat_map(|s| s.parse::<f32>())
+            .nth(0);
 
-        return WatchedMovieInformation {
-            movieUrl: url.unwrap().to_string(),
+        return Some(WatchedMovieInformation {
+            movieUrl: url??.to_string(),
             rating: rating,
-        }
+        });
     }
 }

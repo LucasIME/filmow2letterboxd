@@ -1,5 +1,7 @@
 use reqwest;
 use select::document::Document;
+use select::predicate::And;
+use select::predicate::Class;
 use select::predicate::Name;
 use std::thread;
 
@@ -41,17 +43,20 @@ impl FilmowClient {
         let mut page_num = 1;
         loop {
             let watched_url_for_page = self.get_watched_url_for_page(user, page_num);
-            let html_for_watched_movies = FilmowClient::get_html_from_url(watched_url_for_page.as_str());
+            let html_for_watched_movies =
+                FilmowClient::get_html_from_url(watched_url_for_page.as_str());
             match html_for_watched_movies {
                 Ok(html_for_watched_page) => {
-                    let movie_html_vec = FilmowClient::get_watched_movies_html_per_movie(watched_url_for_page.as_str());
-                    let movie_info_vec: Vec<WatchedMovieInformation> = movie_html_vec.unwrap().iter().map(|movie| MovieExtractor::extract_watched_movie_infor(movie)).collect();
-                    println!("watched movie info: {:?}", movie_info_vec);
+                    let movie_html_vec = FilmowClient::break_watched_movies_html_per_movie(
+                        html_for_watched_page.as_str(),
+                    );
+                    let movie_info_vec: Vec<WatchedMovieInformation> = movie_html_vec
+                        .unwrap()
+                        .iter()
+                        .flat_map(|movie| MovieExtractor::extract_watched_movie_info(movie))
+                        .collect();
 
-
-                    match self
-                        .get_movie_links_from_url(watched_url_for_page.as_str())
-                    {
+                    match self.get_movie_links_from_url(watched_url_for_page.as_str()) {
                         Ok(links) => {
                             let mut page_movies = self.parallel_process_links(links);
                             println!("Movies for page {}: {:?}", page_num, page_movies);
@@ -62,7 +67,10 @@ impl FilmowClient {
                     }
                 }
                 Err(e) => {
-                    println!("Failed to get html for url {}. Error: {}", watched_url_for_page, e);
+                    println!(
+                        "Failed to get html for url {}. Error: {}",
+                        watched_url_for_page, e
+                    );
                 }
             }
         }
@@ -87,20 +95,14 @@ impl FilmowClient {
         )
     }
 
-    fn get_watched_movies_html_per_movie(url: &str) -> Result<Vec<String>, String> {
-        println!("Fetching nodes from Page {}", url);
-        match FilmowClient::get_html_from_url(url) {
-            Ok(html) => {
-                return Ok(Document::from(html.as_str())
-                    .find(Name("a"))
-                    .filter(|n| has_attr_with_name(n, "data-movie-pk"))
-                    .map(|n| n.html())
-                    .collect());
-            }
-            Err(e) => {
-                return Err(e);
-            }
-        }
+    fn break_watched_movies_html_per_movie(
+        full_watched_page_html: &str,
+    ) -> Result<Vec<String>, String> {
+        return Ok(Document::from(full_watched_page_html)
+            .find(And(Name("li"), Class("movie_list_item")))
+            .filter(|n| has_attr_with_name(n, "data-movie-pk"))
+            .map(|n| n.html())
+            .collect());
     }
 
     fn get_movie_links_from_url(&self, url: &str) -> Result<Vec<String>, String> {
@@ -132,7 +134,10 @@ impl FilmowClient {
                 return Ok(resp.text().unwrap());
             }
             Err(e) => {
-                return Err(format!("Failed to get HTML for url: {}. Reived error: {:?}", url, e));
+                return Err(format!(
+                    "Failed to get HTML for url: {}. Reived error: {:?}",
+                    url, e
+                ));
             }
         }
     }
@@ -218,14 +223,13 @@ pub struct MovieBuilder {
 }
 
 impl MovieBuilder {
-
     fn new() -> MovieBuilder {
         return MovieBuilder {
             title: None,
             director: None,
             year: None,
-            rating: None
-        }
+            rating: None,
+        };
     }
 
     fn with_title(mut self, title: String) -> Self {
@@ -253,7 +257,7 @@ impl MovieBuilder {
             title: self.title?,
             director: self.director?,
             year: self.year?,
-            rating: self.rating
+            rating: self.rating,
         });
     }
 }
@@ -261,7 +265,7 @@ impl MovieBuilder {
 #[derive(Debug)]
 pub struct WatchedMovieInformation {
     movieUrl: String,
-    rating: Option<f32>
+    rating: Option<f32>,
 }
 
 fn has_attr_with_name(node: &select::node::Node, name: &str) -> bool {
