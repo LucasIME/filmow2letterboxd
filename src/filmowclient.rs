@@ -56,21 +56,26 @@ impl FilmowClient {
                         .flat_map(|movie| MovieExtractor::extract_watched_movie_info(movie))
                         .collect();
 
-                    match self.get_movie_links_from_url(watched_url_for_page.as_str()) {
-                        Ok(links) => {
-                            let mut page_movies = self.parallel_process_links(links);
-                            println!("Movies for page {}: {:?}", page_num, page_movies);
-                            resp.append(&mut page_movies);
-                            page_num += 1;
-                        }
-                        _ => break,
-                    }
+                    let movie_info_vec_with_full_url: Vec<WatchedMovieInformation> = movie_info_vec
+                        .into_iter()
+                        .map(|info| WatchedMovieInformation {
+                            movieUrl: self.get_base_url() + info.movieUrl.as_str(),
+                            rating: info.rating,
+                        })
+                        .collect();
+
+                    let mut page_movies =
+                        self.parallel_process_watched_links(movie_info_vec_with_full_url);
+                    println!("Movies for page {}: {:?}", page_num, page_movies);
+                    resp.append(&mut page_movies);
+                    page_num += 1;
                 }
                 Err(e) => {
                     println!(
                         "Failed to get html for url {}. Error: {}",
                         watched_url_for_page, e
                     );
+                    break;
                 }
             }
         }
@@ -168,6 +173,37 @@ impl FilmowClient {
         }
     }
 
+    fn parallel_process_watched_links(&self, infoVec: Vec<WatchedMovieInformation>) -> Vec<Movie> {
+        let mut children = vec![];
+        for info in infoVec {
+            children.push(thread::spawn(move || -> Option<Movie> {
+                match FilmowClient::new()
+                    .get_movie_from_url(info.movieUrl.as_str()) {
+                        Ok(movie) => {
+                            Some(Movie {
+                                title: movie.title,
+                                director: movie.director,
+                                year: movie.year,
+                                rating: info.rating
+                            })
+                        }
+                        Err(e) => {
+                            println!("Could not construct movie from url {}. Ignoring it and continuing. Error was: {}", info.movieUrl, e);
+                            return None;
+                        }
+                    }
+            }));
+        }
+
+        let mut movies = vec![];
+        for child in children {
+            let movie = child.join().expect("Could not join child thread");
+            movies.push(movie);
+        }
+
+        return movies.into_iter().flatten().collect();
+    }
+
     fn parallel_process_links(&self, links: Vec<String>) -> Vec<Movie> {
         let mut children = vec![];
         for link in links {
@@ -207,11 +243,12 @@ impl Movie {
             self.title.clone(),
             self.director.clone(),
             self.year.to_string(),
+            self.rating.map(|r| r.to_string()).unwrap_or("".to_string()),
         ];
     }
 
     pub fn csv_titles() -> Vec<&'static str> {
-        return vec!["Title", "Directors", "Year"];
+        return vec!["Title", "Directors", "Year", "Rating"];
     }
 }
 
