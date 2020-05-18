@@ -40,16 +40,25 @@ impl FilmowClient {
         let mut resp = vec![];
         let mut page_num = 1;
         loop {
-            match self
-                .get_movie_links_from_url(self.get_watched_url_for_page(user, page_num).as_str())
-            {
-                Ok(links) => {
-                    let mut page_movies = self.parallel_process_links(links);
-                    println!("Movies for page {}: {:?}", page_num, page_movies);
-                    resp.append(&mut page_movies);
-                    page_num += 1;
+            let watched_url_for_page = self.get_watched_url_for_page(user, page_num).as_str();
+            let html_for_watched_movies = FilmowClient::get_html_from_url(watched_url_for_page);
+            match html_for_watched_movies {
+                Ok(html) => {
+                    match self
+                        .get_movie_links_from_url(watched_url_for_page)
+                    {
+                        Ok(links) => {
+                            let mut page_movies = self.parallel_process_links(links);
+                            println!("Movies for page {}: {:?}", page_num, page_movies);
+                            resp.append(&mut page_movies);
+                            page_num += 1;
+                        }
+                        _ => break,
+                    }
                 }
-                _ => break,
+                Err(e) => {
+                    println!("Failed to get html for url {}. Error: {}", watched_url_for_page, e);
+                }
             }
         }
         return resp;
@@ -73,25 +82,36 @@ impl FilmowClient {
         )
     }
 
-    fn get_movie_links_from_url(&self, url: &str) -> Result<Vec<String>, &str> {
+    fn get_movie_links_from_url<'a>(&self, url: &'a str) -> Result<Vec<String>, &'a str> {
         println!("Fetching links from Page {}", url);
+        match FilmowClient::get_html_from_url(url) {
+            Ok(html) => {
+                return Ok(Document::from(html.as_str())
+                    .find(Name("a"))
+                    .filter(|n| has_attr_with_name(n, "data-movie-pk"))
+                    .map(|n| n.attr("href"))
+                    .flatten()
+                    .map(|x| self.get_base_url() + &x.to_string())
+                    .collect());
+            }
+            Err(e) => {
+                return Err(e);
+            }
+        }
+    }
+
+    fn get_html_from_url(url: &str) -> Result<String, &str> {
+        println!("Getting HTML for url: {}", url);
         match reqwest::get(url) {
             Ok(resp) => {
                 if resp.status() == 404 {
                     return Err("404 page not found");
                 }
 
-                Ok(Document::from_read(resp)
-                    .expect("could not create html document parsers from reqwest response")
-                    .find(Name("a"))
-                    .filter(|n| has_attr_with_name(n, "data-movie-pk"))
-                    .map(|n| n.attr("href"))
-                    .flatten()
-                    .map(|x| self.get_base_url() + &x.to_string())
-                    .collect())
+                return Ok(resp.text().unwrap());
             }
-            _ => {
-                return Err("Non Ok");
+            Err(e) => {
+                return Err(format!("Failed to get HTML for url: {}. Reived error: {:?}", url, e).as_str());
             }
         }
     }
@@ -152,6 +172,7 @@ pub struct Movie {
     title: String,
     director: String,
     year: u32,
+    rating: Option<f32>,
 }
 
 impl Movie {
@@ -165,6 +186,54 @@ impl Movie {
 
     pub fn csv_titles() -> Vec<&'static str> {
         return vec!["Title", "Directors", "Year"];
+    }
+}
+
+pub struct MovieBuilder {
+    title: Option<String>,
+    director: Option<String>,
+    year: Option<u32>,
+    rating: Option<f32>,
+}
+
+impl MovieBuilder {
+
+    fn new() -> MovieBuilder {
+        return MovieBuilder {
+            title: None,
+            director: None,
+            year: None,
+            rating: None
+        }
+    }
+
+    fn with_title(mut self, title: String) -> Self {
+        self.title = Some(title);
+        self
+    }
+
+    fn with_director(mut self, director: String) -> Self {
+        self.director = Some(director);
+        self
+    }
+
+    fn with_year(mut self, year: u32) -> Self {
+        self.year = Some(year);
+        self
+    }
+
+    fn with_rating(mut self, rating: f32) -> Self {
+        self.rating = Some(rating);
+        self
+    }
+
+    fn build(self) -> Option<Movie> {
+        return Some(Movie {
+            title: self.title?,
+            director: self.director?,
+            year: self.year?,
+            rating: self.rating
+        });
     }
 }
 
