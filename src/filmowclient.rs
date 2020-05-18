@@ -162,6 +162,10 @@ impl Movie {
             self.year.to_string(),
         ];
     }
+
+    pub fn csv_titles() -> Vec<&'static str> {
+        return vec!["Title", "Directors", "Year"];
+    }
 }
 
 fn has_attr_with_name(node: &select::node::Node, name: &str) -> bool {
