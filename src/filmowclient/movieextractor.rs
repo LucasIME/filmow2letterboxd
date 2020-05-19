@@ -1,7 +1,10 @@
 use select::document::Document;
+use select::predicate::And;
+use select::predicate::Class;
 use select::predicate::Name;
 
 use crate::filmowclient::Movie;
+use crate::filmowclient::WatchedMovieInformation;
 
 #[derive(Debug)]
 pub struct MovieExtractor {}
@@ -28,6 +31,7 @@ impl MovieExtractor {
             title: title.unwrap(),
             director: director.unwrap(),
             year: year.unwrap(),
+            rating: None,
         });
     }
 
@@ -59,5 +63,22 @@ impl MovieExtractor {
                 Ok(num) => Some(num),
                 Err(_e) => None,
             });
+    }
+
+    pub fn extract_watched_movie_info(watched_movie_html: &str) -> Option<WatchedMovieInformation> {
+        let document = Document::from(watched_movie_html);
+        let url = document.find(Name("a")).map(|n| n.attr("href")).nth(0);
+
+        let rating: Option<f32> = Document::from(watched_movie_html)
+            .find(And(Name("span"), Class("stars")))
+            .flat_map(|n| n.attr("title"))
+            .flat_map(|s| s.split_ascii_whitespace().nth(1))
+            .flat_map(|s| s.parse::<f32>())
+            .nth(0);
+
+        return Some(WatchedMovieInformation {
+            movie_url: url??.to_string(),
+            rating: rating,
+        });
     }
 }

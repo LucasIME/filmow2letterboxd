@@ -8,8 +8,8 @@ use filmowclient::FilmowClient;
 mod csvwriter;
 use csvwriter::CsvWriter;
 
-fn main() {
-    let user = match env::args().nth(1) {
+fn get_username() -> String {
+    return match env::args().nth(1) {
         None => {
             print!("Please, enter the your Filmow username: ");
             io::stdout().flush().expect("could not flush stdout");
@@ -21,6 +21,10 @@ fn main() {
         }
         Some(user) => user,
     };
+}
+
+fn main() {
+    let user = get_username();
 
     let client = FilmowClient::new();
     let watchlist_file_name = "watchlist.csv";
