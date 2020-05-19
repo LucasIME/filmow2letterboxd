@@ -77,7 +77,7 @@ impl MovieExtractor {
             .nth(0);
 
         return Some(WatchedMovieInformation {
-            movieUrl: url??.to_string(),
+            movie_url: url??.to_string(),
             rating: rating,
         });
     }

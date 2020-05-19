@@ -59,7 +59,7 @@ impl FilmowClient {
                     let movie_info_vec_with_full_url: Vec<WatchedMovieInformation> = movie_info_vec
                         .into_iter()
                         .map(|info| WatchedMovieInformation {
-                            movieUrl: self.get_base_url() + info.movieUrl.as_str(),
+                            movie_url: self.get_base_url() + info.movie_url.as_str(),
                             rating: info.rating,
                         })
                         .collect();
@@ -178,7 +178,7 @@ impl FilmowClient {
         for info in infoVec {
             children.push(thread::spawn(move || -> Option<Movie> {
                 match FilmowClient::new()
-                    .get_movie_from_url(info.movieUrl.as_str()) {
+                    .get_movie_from_url(info.movie_url.as_str()) {
                         Ok(movie) => {
                             Some(Movie {
                                 title: movie.title,
@@ -188,7 +188,7 @@ impl FilmowClient {
                             })
                         }
                         Err(e) => {
-                            println!("Could not construct movie from url {}. Ignoring it and continuing. Error was: {}", info.movieUrl, e);
+                            println!("Could not construct movie from url {}. Ignoring it and continuing. Error was: {}", info.movie_url, e);
                             return None;
                         }
                     }
@@ -252,56 +252,9 @@ impl Movie {
     }
 }
 
-pub struct MovieBuilder {
-    title: Option<String>,
-    director: Option<String>,
-    year: Option<u32>,
-    rating: Option<f32>,
-}
-
-impl MovieBuilder {
-    fn new() -> MovieBuilder {
-        return MovieBuilder {
-            title: None,
-            director: None,
-            year: None,
-            rating: None,
-        };
-    }
-
-    fn with_title(mut self, title: String) -> Self {
-        self.title = Some(title);
-        self
-    }
-
-    fn with_director(mut self, director: String) -> Self {
-        self.director = Some(director);
-        self
-    }
-
-    fn with_year(mut self, year: u32) -> Self {
-        self.year = Some(year);
-        self
-    }
-
-    fn with_rating(mut self, rating: f32) -> Self {
-        self.rating = Some(rating);
-        self
-    }
-
-    fn build(self) -> Option<Movie> {
-        return Some(Movie {
-            title: self.title?,
-            director: self.director?,
-            year: self.year?,
-            rating: self.rating,
-        });
-    }
-}
-
 #[derive(Debug)]
 pub struct WatchedMovieInformation {
-    movieUrl: String,
+    movie_url: String,
     rating: Option<f32>,
 }
 
