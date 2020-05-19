@@ -173,9 +173,9 @@ impl FilmowClient {
         }
     }
 
-    fn parallel_process_watched_links(&self, infoVec: Vec<WatchedMovieInformation>) -> Vec<Movie> {
+    fn parallel_process_watched_links(&self, info_vec: Vec<WatchedMovieInformation>) -> Vec<Movie> {
         let mut children = vec![];
-        for info in infoVec {
+        for info in info_vec {
             children.push(thread::spawn(move || -> Option<Movie> {
                 match FilmowClient::new()
                     .get_movie_from_url(info.movie_url.as_str()) {
