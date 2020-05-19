@@ -17,7 +17,7 @@ main() {
 
     test -f Cargo.lock || cargo generate-lockfile
 
-    cross rustc --bin filmow2letterboxd --target $TARGET --release -- -C lto
+    cross rustc --bin filmow2letterboxd --target $TARGET --release
 
     cp target/$TARGET/release/filmow2letterboxd $stage/
 
