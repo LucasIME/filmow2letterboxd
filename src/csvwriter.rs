@@ -1,6 +1,6 @@
 use csv::Writer;
 
-use crate::filmowclient::Movie;
+use crate::filmowclient::movie::Movie;
 
 pub struct CsvWriter {}
 
