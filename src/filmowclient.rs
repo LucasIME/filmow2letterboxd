@@ -44,10 +44,10 @@ impl FilmowClient {
         loop {
             let watched_url_for_page = FilmowClient::get_watched_url_for_page(user, page_num);
             match FilmowClient::get_html_from_url(watched_url_for_page.as_str()) {
-                Ok(html_for_watched_page) => {
+                Ok(watched_page_html) => {
                     let preliminary_movies_info =
                         MovieExtractor::get_preliminary_info_for_watched_movies(
-                            html_for_watched_page.as_str(),
+                            watched_page_html.as_str(),
                         );
                     let mut page_movies = FilmowClient::parallel_build_movie_from_preliminary_info(
                         preliminary_movies_info,
