@@ -23,8 +23,12 @@ impl FilmowClient {
             let watchlist_url = self.get_watchlist_url_for_page(user, page_num);
             match FilmowClient::get_html_from_url(watchlist_url.as_str()) {
                 Ok(watchlist_page_html) => {
-                    let preliminary_movies_info = MovieExtractor::get_preliminary_info_for_watchlist(watchlist_page_html.as_str());
-                    let mut page_movies = self.parallel_build_movie_from_preliminary_info(preliminary_movies_info);
+                    let preliminary_movies_info =
+                        MovieExtractor::get_preliminary_info_for_watchlist(
+                            watchlist_page_html.as_str(),
+                        );
+                    let mut page_movies =
+                        self.parallel_build_movie_from_preliminary_info(preliminary_movies_info);
                     println!("Movies for page {}: {:?}", page_num, page_movies);
                     resp.append(&mut page_movies);
                     page_num += 1;
@@ -44,7 +48,10 @@ impl FilmowClient {
             let watched_url_for_page = self.get_watched_url_for_page(user, page_num);
             match FilmowClient::get_html_from_url(watched_url_for_page.as_str()) {
                 Ok(html_for_watched_page) => {
-                    let preliminary_movies_info = MovieExtractor::get_preliminary_info_for_watched_movies(html_for_watched_page.as_str());
+                    let preliminary_movies_info =
+                        MovieExtractor::get_preliminary_info_for_watched_movies(
+                            html_for_watched_page.as_str(),
+                        );
                     let mut page_movies =
                         self.parallel_build_movie_from_preliminary_info(preliminary_movies_info);
                     println!("Movies for page {}: {:?}", page_num, page_movies);
@@ -126,7 +133,10 @@ impl FilmowClient {
         }
     }
 
-    fn parallel_build_movie_from_preliminary_info(&self, info_vec: Vec<PreliminaryMovieInformation>) -> Vec<Movie> {
+    fn parallel_build_movie_from_preliminary_info(
+        &self,
+        info_vec: Vec<PreliminaryMovieInformation>,
+    ) -> Vec<Movie> {
         let mut children = vec![];
         for info in info_vec {
             children.push(thread::spawn(move || -> Option<Movie> {
@@ -159,7 +169,7 @@ impl FilmowClient {
 }
 
 #[derive(Debug)]
-pub struct PreliminaryMovieInformation{
+pub struct PreliminaryMovieInformation {
     movie_url: String,
     rating: Option<f32>,
 }

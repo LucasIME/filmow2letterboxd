@@ -3,9 +3,9 @@ use select::predicate::And;
 use select::predicate::Class;
 use select::predicate::Name;
 
+use crate::filmowclient::FilmowClient;
 use crate::filmowclient::Movie;
 use crate::filmowclient::PreliminaryMovieInformation;
-use crate::filmowclient::FilmowClient;
 
 #[derive(Debug)]
 pub struct MovieExtractor {}
@@ -66,31 +66,36 @@ impl MovieExtractor {
             });
     }
 
-    pub fn get_preliminary_info_for_watchlist(watchlist_page_html: &str) -> Vec<PreliminaryMovieInformation> {
+    pub fn get_preliminary_info_for_watchlist(
+        watchlist_page_html: &str,
+    ) -> Vec<PreliminaryMovieInformation> {
         return Document::from(watchlist_page_html)
             .find(Name("a"))
             .filter(|n| n.attr("data-movie-pk").is_some())
             .map(|n| n.attr("href"))
             .flatten()
             .map(|x| FilmowClient::get_base_url() + &x.to_string())
-            .map(|url| PreliminaryMovieInformation{
+            .map(|url| PreliminaryMovieInformation {
                 movie_url: url,
-                rating: None
+                rating: None,
             })
             .collect();
     }
 
-    pub fn get_preliminary_info_for_watched_movies(watched_page_html: &str) -> Vec<PreliminaryMovieInformation> {
+    pub fn get_preliminary_info_for_watched_movies(
+        watched_page_html: &str,
+    ) -> Vec<PreliminaryMovieInformation> {
         let html_per_movie = MovieExtractor::break_watched_movies_html_per_movie(watched_page_html);
 
         match html_per_movie {
             Ok(html_vec) => {
-                return html_vec.iter()
+                return html_vec
+                    .iter()
                     .map(|movie_html| MovieExtractor::extract_watched_movie_info(movie_html))
                     .flatten()
                     .collect();
             }
-            _ => vec!()
+            _ => vec![],
         }
     }
 

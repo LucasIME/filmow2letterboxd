@@ -1,4 +1,3 @@
-
 #[derive(Debug)]
 pub struct Movie {
     pub title: String,
