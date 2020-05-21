@@ -3,8 +3,9 @@ use select::predicate::And;
 use select::predicate::Class;
 use select::predicate::Name;
 
+use crate::filmowclient::FilmowClient;
 use crate::filmowclient::Movie;
-use crate::filmowclient::WatchedMovieInformation;
+use crate::filmowclient::PreliminaryMovieInformation;
 
 #[derive(Debug)]
 pub struct MovieExtractor {}
@@ -65,7 +66,40 @@ impl MovieExtractor {
             });
     }
 
-    pub fn extract_watched_movie_info(watched_movie_html: &str) -> Option<WatchedMovieInformation> {
+    pub fn get_preliminary_info_for_watchlist(
+        watchlist_page_html: &str,
+    ) -> Vec<PreliminaryMovieInformation> {
+        return Document::from(watchlist_page_html)
+            .find(Name("a"))
+            .filter(|n| n.attr("data-movie-pk").is_some())
+            .map(|n| n.attr("href"))
+            .flatten()
+            .map(|x| FilmowClient::get_base_url() + &x.to_string())
+            .map(|url| PreliminaryMovieInformation {
+                movie_url: url,
+                rating: None,
+            })
+            .collect();
+    }
+
+    pub fn get_preliminary_info_for_watched_movies(
+        watched_page_html: &str,
+    ) -> Vec<PreliminaryMovieInformation> {
+        let html_per_movie = MovieExtractor::break_watched_movies_html_per_movie(watched_page_html);
+
+        match html_per_movie {
+            Ok(html_vec) => {
+                return html_vec
+                    .iter()
+                    .map(|movie_html| MovieExtractor::extract_watched_movie_info(movie_html))
+                    .flatten()
+                    .collect();
+            }
+            _ => vec![],
+        }
+    }
+
+    fn extract_watched_movie_info(watched_movie_html: &str) -> Option<PreliminaryMovieInformation> {
         let document = Document::from(watched_movie_html);
         let url = document.find(Name("a")).map(|n| n.attr("href")).nth(0);
 
@@ -76,9 +110,19 @@ impl MovieExtractor {
             .flat_map(|s| s.parse::<f32>())
             .nth(0);
 
-        return Some(WatchedMovieInformation {
-            movie_url: url??.to_string(),
+        return Some(PreliminaryMovieInformation {
+            movie_url: FilmowClient::get_base_url() + url??,
             rating: rating,
         });
+    }
+
+    fn break_watched_movies_html_per_movie(
+        full_watched_page_html: &str,
+    ) -> Result<Vec<String>, String> {
+        return Ok(Document::from(full_watched_page_html)
+            .find(And(Name("li"), Class("movie_list_item")))
+            .filter(|n| n.attr("data-movie-pk").is_some())
+            .map(|n| n.html())
+            .collect());
     }
 }

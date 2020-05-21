@@ -26,11 +26,10 @@ fn get_username() -> String {
 fn main() {
     let user = get_username();
 
-    let client = FilmowClient::new();
     let watchlist_file_name = "watchlist.csv";
     let watched_movies_file_name = "watched.csv";
 
-    let watchlist_movies = client.get_all_movies_from_watchlist(user.as_str());
+    let watchlist_movies = FilmowClient::get_all_movies_from_watchlist(user.as_str());
     match CsvWriter::save_movies_to_csv(watchlist_movies, watchlist_file_name) {
         Err(e) => return println!("Error when saving watchlist: {:?}", e),
         _ => println!(
@@ -39,7 +38,7 @@ fn main() {
         ),
     }
 
-    let watched_movies = client.get_all_watched_movies(user.as_str());
+    let watched_movies = FilmowClient::get_all_watched_movies(user.as_str());
     match CsvWriter::save_movies_to_csv(watched_movies, watched_movies_file_name) {
         Err(e) => return println!("Error when saving watched movies: {:?}", e),
         _ => println!(
