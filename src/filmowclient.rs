@@ -11,24 +11,21 @@ use movie::Movie;
 pub struct FilmowClient {}
 
 impl FilmowClient {
-    pub fn new() -> FilmowClient {
-        FilmowClient {}
-    }
-
-    pub fn get_all_movies_from_watchlist(&self, user: &str) -> Vec<Movie> {
+    pub fn get_all_movies_from_watchlist(user: &str) -> Vec<Movie> {
         println!("Fetching watchlist for user {}", user);
         let mut resp = vec![];
         let mut page_num = 1;
         loop {
-            let watchlist_url = self.get_watchlist_url_for_page(user, page_num);
+            let watchlist_url = FilmowClient::get_watchlist_url_for_page(user, page_num);
             match FilmowClient::get_html_from_url(watchlist_url.as_str()) {
                 Ok(watchlist_page_html) => {
                     let preliminary_movies_info =
                         MovieExtractor::get_preliminary_info_for_watchlist(
                             watchlist_page_html.as_str(),
                         );
-                    let mut page_movies =
-                        self.parallel_build_movie_from_preliminary_info(preliminary_movies_info);
+                    let mut page_movies = FilmowClient::parallel_build_movie_from_preliminary_info(
+                        preliminary_movies_info,
+                    );
                     println!("Movies for page {}: {:?}", page_num, page_movies);
                     resp.append(&mut page_movies);
                     page_num += 1;
@@ -40,20 +37,21 @@ impl FilmowClient {
         return resp;
     }
 
-    pub fn get_all_watched_movies(&self, user: &str) -> Vec<Movie> {
+    pub fn get_all_watched_movies(user: &str) -> Vec<Movie> {
         println!("Fetching watched movies for user {}", user);
         let mut resp = vec![];
         let mut page_num = 1;
         loop {
-            let watched_url_for_page = self.get_watched_url_for_page(user, page_num);
+            let watched_url_for_page = FilmowClient::get_watched_url_for_page(user, page_num);
             match FilmowClient::get_html_from_url(watched_url_for_page.as_str()) {
                 Ok(html_for_watched_page) => {
                     let preliminary_movies_info =
                         MovieExtractor::get_preliminary_info_for_watched_movies(
                             html_for_watched_page.as_str(),
                         );
-                    let mut page_movies =
-                        self.parallel_build_movie_from_preliminary_info(preliminary_movies_info);
+                    let mut page_movies = FilmowClient::parallel_build_movie_from_preliminary_info(
+                        preliminary_movies_info,
+                    );
                     println!("Movies for page {}: {:?}", page_num, page_movies);
                     resp.append(&mut page_movies);
                     page_num += 1;
@@ -74,14 +72,14 @@ impl FilmowClient {
         "https://filmow.com".to_string()
     }
 
-    fn get_watchlist_url_for_page(&self, user: &str, page: i32) -> String {
+    fn get_watchlist_url_for_page(user: &str, page: i32) -> String {
         format!(
             "https://filmow.com/usuario/{}/filmes/quero-ver/?pagina={}",
             user, page
         )
     }
 
-    fn get_watched_url_for_page(&self, user: &str, page: i32) -> String {
+    fn get_watched_url_for_page(user: &str, page: i32) -> String {
         format!(
             "https://filmow.com/usuario/{}/filmes/ja-vi/?pagina={}",
             user, page
@@ -107,7 +105,7 @@ impl FilmowClient {
         }
     }
 
-    fn get_movie_from_url(&self, url: &str) -> Result<Movie, String> {
+    fn get_movie_from_url(url: &str) -> Result<Movie, String> {
         match reqwest::get(url) {
             Ok(mut resp) => {
                 if resp.status() == 404 {
@@ -134,14 +132,12 @@ impl FilmowClient {
     }
 
     fn parallel_build_movie_from_preliminary_info(
-        &self,
         info_vec: Vec<PreliminaryMovieInformation>,
     ) -> Vec<Movie> {
         let mut children = vec![];
         for info in info_vec {
             children.push(thread::spawn(move || -> Option<Movie> {
-                match FilmowClient::new()
-                    .get_movie_from_url(info.movie_url.as_str()) {
+                match FilmowClient::get_movie_from_url(info.movie_url.as_str()) {
                         Ok(movie) => {
                             Some(Movie {
                                 title: movie.title,
