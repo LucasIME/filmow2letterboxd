@@ -1,5 +1,4 @@
 use reqwest;
-use std::thread;
 
 mod movieextractor;
 use movieextractor::MovieExtractor;
@@ -11,13 +10,13 @@ use movie::Movie;
 pub struct FilmowClient {}
 
 impl FilmowClient {
-    pub fn get_all_movies_from_watchlist(user: &str) -> Vec<Movie> {
+    pub async fn get_all_movies_from_watchlist(user: &str) -> Vec<Movie> {
         println!("Fetching watchlist for user {}", user);
         let mut resp = vec![];
         let mut page_num = 1;
         loop {
             let watchlist_url = FilmowClient::get_watchlist_url_for_page(user, page_num);
-            match FilmowClient::get_html_from_url(watchlist_url.as_str()) {
+            match FilmowClient::get_html_from_url(watchlist_url.as_str()).await {
                 Ok(watchlist_page_html) => {
                     let preliminary_movies_info =
                         MovieExtractor::get_preliminary_info_for_watchlist(
@@ -25,7 +24,8 @@ impl FilmowClient {
                         );
                     let mut page_movies = FilmowClient::parallel_build_movie_from_preliminary_info(
                         preliminary_movies_info,
-                    );
+                    )
+                    .await;
                     println!("Movies for page {}: {:?}", page_num, page_movies);
                     resp.append(&mut page_movies);
                     page_num += 1;
@@ -37,13 +37,13 @@ impl FilmowClient {
         return resp;
     }
 
-    pub fn get_all_watched_movies(user: &str) -> Vec<Movie> {
+    pub async fn get_all_watched_movies(user: &str) -> Vec<Movie> {
         println!("Fetching watched movies for user {}", user);
         let mut resp = vec![];
         let mut page_num = 1;
         loop {
             let watched_url_for_page = FilmowClient::get_watched_url_for_page(user, page_num);
-            match FilmowClient::get_html_from_url(watched_url_for_page.as_str()) {
+            match FilmowClient::get_html_from_url(watched_url_for_page.as_str()).await {
                 Ok(watched_page_html) => {
                     let preliminary_movies_info =
                         MovieExtractor::get_preliminary_info_for_watched_movies(
@@ -51,7 +51,8 @@ impl FilmowClient {
                         );
                     let mut page_movies = FilmowClient::parallel_build_movie_from_preliminary_info(
                         preliminary_movies_info,
-                    );
+                    )
+                    .await;
                     println!("Movies for page {}: {:?}", page_num, page_movies);
                     resp.append(&mut page_movies);
                     page_num += 1;
@@ -86,15 +87,21 @@ impl FilmowClient {
         )
     }
 
-    fn get_html_from_url(url: &str) -> Result<String, String> {
+    async fn get_html_from_url(url: &str) -> Result<String, String> {
         println!("Getting HTML for url: {}", url);
-        match reqwest::get(url) {
-            Ok(mut resp) => {
+        match reqwest::get(url).await {
+            Ok(resp) => {
                 if resp.status() == 404 {
                     return Err("404 page not found".to_string());
                 }
-
-                return Ok(resp.text().unwrap());
+                match resp.text().await {
+                    Ok(text) => Ok(text),
+                    Err(e) => Err(format!(
+                        "Failed to get text form url {}. Error was {}",
+                        url, e
+                    )),
+                }
+                // return Ok(resp.text().unwrap());
             }
             Err(e) => {
                 return Err(format!(
@@ -105,14 +112,14 @@ impl FilmowClient {
         }
     }
 
-    fn get_movie_from_url(url: &str) -> Result<Movie, String> {
-        match reqwest::get(url) {
-            Ok(mut resp) => {
+    async fn get_movie_from_url(url: &str) -> Result<Movie, String> {
+        match reqwest::get(url).await {
+            Ok(resp) => {
                 if resp.status() == 404 {
                     return Err(format!("404 page not found, when fetching for url {}", url));
                 }
 
-                let html_body = match resp.text() {
+                let html_body = match resp.text().await {
                     Ok(body) => body,
                     Err(e) => {
                         return Err(format!(
@@ -131,13 +138,14 @@ impl FilmowClient {
         }
     }
 
-    fn parallel_build_movie_from_preliminary_info(
+    async fn parallel_build_movie_from_preliminary_info(
         info_vec: Vec<PreliminaryMovieInformation>,
     ) -> Vec<Movie> {
         let mut children = vec![];
         for info in info_vec {
-            children.push(thread::spawn(move || -> Option<Movie> {
-                match FilmowClient::get_movie_from_url(info.movie_url.as_str()) {
+            children.push(
+                tokio::spawn(async move {
+                match FilmowClient::get_movie_from_url(info.movie_url.as_str()).await {
                         Ok(movie) => {
                             Some(Movie {
                                 title: movie.title,
@@ -156,7 +164,7 @@ impl FilmowClient {
 
         let mut movies = vec![];
         for child in children {
-            let movie = child.join().expect("Could not join child thread");
+            let movie = child.await.expect("Could not join child thread");
             movies.push(movie);
         }
 
