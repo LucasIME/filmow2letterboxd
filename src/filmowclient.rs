@@ -16,27 +16,26 @@ impl FilmowClient {
         let number_of_pages = FilmowClient::get_last_watchlist_page_number(&user).await;
         println!("Number of watchlist pages {:?}", number_of_pages);
 
-        let mut resp = vec![];
+        let mut all_preliminary_info = vec![];
         for page_num in 1..=number_of_pages {
             let watchlist_url = FilmowClient::get_watchlist_url_for_page(user, page_num);
             match FilmowClient::get_html_from_url(watchlist_url.as_str()).await {
                 Ok(watchlist_page_html) => {
-                    let preliminary_movies_info =
+                    let mut preliminary_movies_info =
                         MovieExtractor::get_preliminary_info_for_watchlist(
                             watchlist_page_html.as_str(),
                         );
-                    let mut page_movies = FilmowClient::parallel_build_movie_from_preliminary_info(
-                        preliminary_movies_info,
-                    )
-                    .await;
-                    println!("Movies for page {}: {:?}", page_num, page_movies);
-                    resp.append(&mut page_movies);
+                    all_preliminary_info.append(&mut preliminary_movies_info);
                 }
                 _ => break,
             }
         }
 
-        return resp;
+        let page_movies = FilmowClient::parallel_build_movie_from_preliminary_info(
+            all_preliminary_info,
+        )
+        .await;
+        return page_movies;
     }
 
     pub async fn get_all_watched_movies(user: &str) -> Vec<Movie> {
@@ -45,21 +44,16 @@ impl FilmowClient {
         let number_of_pages = FilmowClient::get_last_watched_page_number(&user).await;
         println!("Number of watched movies pages {:?}", number_of_pages);
 
-        let mut resp = vec![];
+        let mut all_preliminary_info = vec![];
         for page_num in 1..=number_of_pages {
             let watched_url_for_page = FilmowClient::get_watched_url_for_page(user, page_num);
             match FilmowClient::get_html_from_url(watched_url_for_page.as_str()).await {
                 Ok(watched_page_html) => {
-                    let preliminary_movies_info =
+                    let mut preliminary_movies_info =
                         MovieExtractor::get_preliminary_info_for_watched_movies(
                             watched_page_html.as_str(),
                         );
-                    let mut page_movies = FilmowClient::parallel_build_movie_from_preliminary_info(
-                        preliminary_movies_info,
-                    )
-                    .await;
-                    println!("Movies for page {}: {:?}", page_num, page_movies);
-                    resp.append(&mut page_movies);
+                    all_preliminary_info.append(&mut preliminary_movies_info);
                 }
                 Err(e) => {
                     println!(
@@ -70,7 +64,12 @@ impl FilmowClient {
                 }
             }
         }
-        return resp;
+
+        let page_movies = FilmowClient::parallel_build_movie_from_preliminary_info(
+            all_preliminary_info,
+        )
+        .await;
+        return page_movies;
     }
 
     async fn get_last_watchlist_page_number(user: &str) -> i32 {
