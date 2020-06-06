@@ -12,9 +12,12 @@ pub struct FilmowClient {}
 impl FilmowClient {
     pub async fn get_all_movies_from_watchlist(user: &str) -> Vec<Movie> {
         println!("Fetching watchlist for user {}", user);
+
+        let number_of_pages = FilmowClient::get_last_watchlist_page_number(&user).await;
+        println!("Number of watchlist pages {:?}", number_of_pages);
+
         let mut resp = vec![];
-        let mut page_num = 1;
-        loop {
+        for page_num in 1..=number_of_pages {
             let watchlist_url = FilmowClient::get_watchlist_url_for_page(user, page_num);
             match FilmowClient::get_html_from_url(watchlist_url.as_str()).await {
                 Ok(watchlist_page_html) => {
@@ -28,7 +31,6 @@ impl FilmowClient {
                     .await;
                     println!("Movies for page {}: {:?}", page_num, page_movies);
                     resp.append(&mut page_movies);
-                    page_num += 1;
                 }
                 _ => break,
             }
@@ -39,9 +41,12 @@ impl FilmowClient {
 
     pub async fn get_all_watched_movies(user: &str) -> Vec<Movie> {
         println!("Fetching watched movies for user {}", user);
+
+        let number_of_pages = FilmowClient::get_last_watched_page_number(&user).await;
+        println!("Number of watched movies pages {:?}", number_of_pages);
+
         let mut resp = vec![];
-        let mut page_num = 1;
-        loop {
+        for page_num in 1..=number_of_pages {
             let watched_url_for_page = FilmowClient::get_watched_url_for_page(user, page_num);
             match FilmowClient::get_html_from_url(watched_url_for_page.as_str()).await {
                 Ok(watched_page_html) => {
@@ -55,7 +60,6 @@ impl FilmowClient {
                     .await;
                     println!("Movies for page {}: {:?}", page_num, page_movies);
                     resp.append(&mut page_movies);
-                    page_num += 1;
                 }
                 Err(e) => {
                     println!(
@@ -69,6 +73,31 @@ impl FilmowClient {
         return resp;
     }
 
+    async fn get_last_watchlist_page_number(user: &str) -> i32 {
+        println!("Getting total number of watchlist pages");
+        let watchlist_url = FilmowClient::get_watchlist_url_for_page(user, 1);
+        match FilmowClient::get_html_from_url(watchlist_url.as_str()).await {
+            Ok(watchlist_page_html) => {
+                MovieExtractor::get_last_page_from_html(watchlist_page_html.as_str()).unwrap_or(1)
+            }
+            Err(e) => {
+                panic!("Error when trying to find number of watchlist pages: {}", e);
+            }
+        }
+    }
+
+    async fn get_last_watched_page_number(user: &str) -> i32 {
+        println!("Getting total number of watched pages");
+        let watched_url = FilmowClient::get_watched_url_for_page(user, 1);
+        match FilmowClient::get_html_from_url(watched_url.as_str()).await {
+            Ok(watched_page_html) => {
+                MovieExtractor::get_last_page_from_html(watched_page_html.as_str()).unwrap_or(1)
+            }
+            Err(e) => {
+                panic!("Error when trying to find number of watched pages: {}", e);
+            }
+        }
+    }
     fn get_base_url() -> String {
         "https://filmow.com".to_string()
     }
@@ -88,7 +117,6 @@ impl FilmowClient {
     }
 
     async fn get_html_from_url(url: &str) -> Result<String, String> {
-        println!("Getting HTML for url: {}", url);
         match reqwest::get(url).await {
             Ok(resp) => {
                 if resp.status() == 404 {
@@ -104,7 +132,7 @@ impl FilmowClient {
             }
             Err(e) => {
                 return Err(format!(
-                    "Failed to get HTML for url: {}. Reived error: {:?}",
+                    "Failed to get HTML for url: {}. Received error: {:?}",
                     url, e
                 ));
             }
@@ -112,28 +140,11 @@ impl FilmowClient {
     }
 
     async fn get_movie_from_url(url: &str) -> Result<Movie, String> {
-        match reqwest::get(url).await {
-            Ok(resp) => {
-                if resp.status() == 404 {
-                    return Err(format!("404 page not found, when fetching for url {}", url));
-                }
-
-                let html_body = match resp.text().await {
-                    Ok(body) => body,
-                    Err(e) => {
-                        return Err(format!(
-                            "Error when getting html body for url {}. Error: {:?}",
-                            url, e
-                        ));
-                    }
-                };
-
+        match FilmowClient::get_html_from_url(url).await {
+            Ok(html_body) => {
                 return MovieExtractor::extract_movie_from_html(html_body.as_str(), url);
             }
-            Err(e) => Err(format!(
-                "Reqwest error when fetching url {}. Error: {:?}",
-                url, e
-            )),
+            Err(e) => Err(e)
         }
     }
 

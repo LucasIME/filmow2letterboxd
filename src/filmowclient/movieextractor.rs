@@ -99,6 +99,20 @@ impl MovieExtractor {
         }
     }
 
+    pub fn get_last_page_from_html(page_html: &str) -> Option<i32> {
+        let document = Document::from(page_html);
+
+        let last_page = document.find(Name("a"))
+        .flat_map(|n| n.attr("href"))
+        .flat_map(|link| {
+            let page_num_str = link.split("pagina=").nth(1);
+            return page_num_str.map(|num_str| num_str.parse::<i32>().unwrap());
+        })
+        .last();
+
+        return last_page;
+    }
+
     fn extract_watched_movie_info(watched_movie_html: &str) -> Option<PreliminaryMovieInformation> {
         let document = Document::from(watched_movie_html);
         let url = document.find(Name("a")).map(|n| n.attr("href")).nth(0);
