@@ -26,12 +26,19 @@ fn get_username() -> String {
 #[tokio::main]
 async fn main() {
     let user = get_username();
+    let user_clone = user.clone();
 
     let watchlist_file_name = "watchlist.csv";
     let watched_movies_file_name = "watched.csv";
 
-    let watchlist_movies = FilmowClient::get_all_movies_from_watchlist(user.as_str());
-    match CsvWriter::save_movies_to_csv(watchlist_movies.await, watchlist_file_name) {
+    let watchlist_movies_handle = tokio::spawn(async move {
+        FilmowClient::get_all_movies_from_watchlist(user.as_str()).await
+    }); 
+    let watched_movies_handle = tokio::spawn(async move {
+        FilmowClient::get_all_watched_movies(user_clone.as_str()).await
+    });
+
+    match CsvWriter::save_movies_to_csv(watchlist_movies_handle.await.unwrap(), watchlist_file_name) {
         Err(e) => return println!("Error when saving watchlist: {:?}", e),
         _ => println!(
             "Successfully generated watchlist file: {}",
@@ -39,8 +46,7 @@ async fn main() {
         ),
     }
 
-    let watched_movies = FilmowClient::get_all_watched_movies(user.as_str());
-    match CsvWriter::save_movies_to_csv(watched_movies.await, watched_movies_file_name) {
+    match CsvWriter::save_movies_to_csv(watched_movies_handle.await.unwrap(), watched_movies_file_name) {
         Err(e) => return println!("Error when saving watched movies: {:?}", e),
         _ => println!(
             "Successfully generated watched movies file: {}",
