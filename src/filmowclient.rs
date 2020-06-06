@@ -31,10 +31,8 @@ impl FilmowClient {
             }
         }
 
-        let page_movies = FilmowClient::parallel_build_movie_from_preliminary_info(
-            all_preliminary_info,
-        )
-        .await;
+        let page_movies =
+            FilmowClient::parallel_build_movie_from_preliminary_info(all_preliminary_info).await;
         return page_movies;
     }
 
@@ -65,10 +63,8 @@ impl FilmowClient {
             }
         }
 
-        let page_movies = FilmowClient::parallel_build_movie_from_preliminary_info(
-            all_preliminary_info,
-        )
-        .await;
+        let page_movies =
+            FilmowClient::parallel_build_movie_from_preliminary_info(all_preliminary_info).await;
         return page_movies;
     }
 
@@ -143,7 +139,7 @@ impl FilmowClient {
             Ok(html_body) => {
                 return MovieExtractor::extract_movie_from_html(html_body.as_str(), url);
             }
-            Err(e) => Err(e)
+            Err(e) => Err(e),
         }
     }
 
