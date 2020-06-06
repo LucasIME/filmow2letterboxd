@@ -101,7 +101,6 @@ impl FilmowClient {
                         url, e
                     )),
                 }
-                // return Ok(resp.text().unwrap());
             }
             Err(e) => {
                 return Err(format!(
