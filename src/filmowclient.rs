@@ -103,15 +103,23 @@ impl FilmowClient {
     }
 
     fn get_watchlist_url_for_page(user: &str, page: i32) -> String {
+        if page == 1 {
+            return format!("https://filmow.com/usuario/{}/quero-ver/", user);
+        }
+
         format!(
-            "https://filmow.com/usuario/{}/filmes/quero-ver/?pagina={}",
+            "https://filmow.com/usuario/{}/quero-ver/?pagina={}",
             user, page
         )
     }
 
     fn get_watched_url_for_page(user: &str, page: i32) -> String {
+        if page == 1 {
+            return format!("https://filmow.com/usuario/{}/ja-vi/", user);
+        }
+
         format!(
-            "https://filmow.com/usuario/{}/filmes/ja-vi/?pagina={}",
+            "https://filmow.com/usuario/{}/ja-vi/?pagina={}",
             user, page
         )
     }
