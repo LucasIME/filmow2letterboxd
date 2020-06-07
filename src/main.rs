@@ -1,3 +1,4 @@
+use futures::join;
 use std::env;
 use std::io;
 use std::io::prelude::*;
@@ -32,13 +33,9 @@ async fn main() {
     let watched_movies_file_name = "watched.csv";
 
     let watchlist_movies_handle =
-        tokio::spawn(
-            async move { FilmowClient::get_all_movies_from_watchlist(user.as_str()).await },
-        );
+        tokio::spawn(async move { FilmowClient::get_all_movies_from_watchlist(user).await });
     let watched_movies_handle =
-        tokio::spawn(
-            async move { FilmowClient::get_all_watched_movies(user_clone.as_str()).await },
-        );
+        tokio::spawn(async move { FilmowClient::get_all_watched_movies(user_clone).await });
 
     match CsvWriter::save_movies_to_csv(watchlist_movies_handle.await.unwrap(), watchlist_file_name)
     {

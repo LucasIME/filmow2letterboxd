@@ -10,25 +10,35 @@ use movie::Movie;
 pub struct FilmowClient {}
 
 impl FilmowClient {
-    pub async fn get_all_movies_from_watchlist(user: &str) -> Vec<Movie> {
+    pub async fn get_all_movies_from_watchlist(user: String) -> Vec<Movie> {
         println!("Fetching watchlist for user {}", user);
 
         let number_of_pages = FilmowClient::get_last_watchlist_page_number(&user).await;
         println!("Number of watchlist pages {:?}", number_of_pages);
 
         let mut all_preliminary_info = vec![];
+        let mut page_handles = vec![];
         for page_num in 1..=number_of_pages {
-            let watchlist_url = FilmowClient::get_watchlist_url_for_page(user, page_num);
-            match FilmowClient::get_html_from_url(watchlist_url.as_str()).await {
-                Ok(watchlist_page_html) => {
-                    let mut preliminary_movies_info =
-                        MovieExtractor::get_preliminary_info_for_watchlist(
-                            watchlist_page_html.as_str(),
-                        );
-                    all_preliminary_info.append(&mut preliminary_movies_info);
+            let user_clone = user.clone();
+            page_handles.push(tokio::spawn(async move {
+                let watchlist_url =
+                    FilmowClient::get_watchlist_url_for_page(user_clone.as_str(), page_num);
+                match FilmowClient::get_html_from_url(watchlist_url.as_str()).await {
+                    Ok(watchlist_page_html) => {
+                        let preliminary_movies_info =
+                            MovieExtractor::get_preliminary_info_for_watchlist(
+                                watchlist_page_html.as_str(),
+                            );
+                        return Some(preliminary_movies_info);
+                    }
+                    _ => None,
                 }
-                _ => break,
-            }
+            }));
+        }
+
+        for handle in page_handles {
+            let preliminary_info = handle.await.expect("could not join child thread");
+            all_preliminary_info.append(&mut preliminary_info.unwrap());
         }
 
         let page_movies =
@@ -36,31 +46,35 @@ impl FilmowClient {
         return page_movies;
     }
 
-    pub async fn get_all_watched_movies(user: &str) -> Vec<Movie> {
+    pub async fn get_all_watched_movies(user: String) -> Vec<Movie> {
         println!("Fetching watched movies for user {}", user);
 
         let number_of_pages = FilmowClient::get_last_watched_page_number(&user).await;
         println!("Number of watched movies pages {:?}", number_of_pages);
 
         let mut all_preliminary_info = vec![];
+        let mut page_handles = vec![];
         for page_num in 1..=number_of_pages {
-            let watched_url_for_page = FilmowClient::get_watched_url_for_page(user, page_num);
-            match FilmowClient::get_html_from_url(watched_url_for_page.as_str()).await {
-                Ok(watched_page_html) => {
-                    let mut preliminary_movies_info =
-                        MovieExtractor::get_preliminary_info_for_watched_movies(
-                            watched_page_html.as_str(),
-                        );
-                    all_preliminary_info.append(&mut preliminary_movies_info);
+            let user_clone = user.clone();
+            page_handles.push(tokio::spawn(async move {
+                let watched_url_for_page =
+                    FilmowClient::get_watched_url_for_page(user_clone.as_str(), page_num);
+                match FilmowClient::get_html_from_url(watched_url_for_page.as_str()).await {
+                    Ok(watched_page_html) => {
+                        let preliminary_movies_info =
+                            MovieExtractor::get_preliminary_info_for_watched_movies(
+                                watched_page_html.as_str(),
+                            );
+                        return Some(preliminary_movies_info);
+                    }
+                    _ => None,
                 }
-                Err(e) => {
-                    println!(
-                        "Failed to get html for url {}. Error: {}",
-                        watched_url_for_page, e
-                    );
-                    break;
-                }
-            }
+            }));
+        }
+
+        for handle in page_handles {
+            let preliminary_info = handle.await.expect("could not join child thread");
+            all_preliminary_info.append(&mut preliminary_info.unwrap());
         }
 
         let page_movies =
