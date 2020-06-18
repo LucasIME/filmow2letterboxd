@@ -7,7 +7,7 @@ pub struct CsvWriter {}
 impl CsvWriter {
     pub fn save_movies_to_csv(movies: Vec<Movie>, file_name: &str) -> Result<(), String> {
         let mut wrt = Writer::from_path(file_name)
-            .expect(format!("Could not create CSV Writer for file {}", file_name).as_str());
+            .unwrap_or_else(|_| panic!("Could not create CSV Writer for file {}", file_name));
         match wrt.write_record(&Movie::csv_titles()) {
             Err(e) => {
                 return Err(format!(

@@ -1,5 +1,3 @@
-use reqwest;
-
 mod movieextractor;
 use movieextractor::MovieExtractor;
 
@@ -36,7 +34,7 @@ impl FilmowClient {
             }
         }
 
-        return resp;
+        resp
     }
 
     pub async fn get_all_watched_movies(user: &str) -> Vec<Movie> {
@@ -70,7 +68,7 @@ impl FilmowClient {
                 }
             }
         }
-        return resp;
+        resp
     }
 
     async fn get_last_watchlist_page_number(user: &str) -> i32 {
@@ -118,10 +116,7 @@ impl FilmowClient {
             return format!("https://filmow.com/usuario/{}/ja-vi/", user);
         }
 
-        format!(
-            "https://filmow.com/usuario/{}/ja-vi/?pagina={}",
-            user, page
-        )
+        format!("https://filmow.com/usuario/{}/ja-vi/?pagina={}", user, page)
     }
 
     async fn get_html_from_url(url: &str) -> Result<String, String> {
@@ -138,21 +133,17 @@ impl FilmowClient {
                     )),
                 }
             }
-            Err(e) => {
-                return Err(format!(
-                    "Failed to get HTML for url: {}. Received error: {:?}",
-                    url, e
-                ));
-            }
+            Err(e) => Err(format!(
+                "Failed to get HTML for url: {}. Received error: {:?}",
+                url, e
+            )),
         }
     }
 
     async fn get_movie_from_url(url: &str) -> Result<Movie, String> {
         match FilmowClient::get_html_from_url(url).await {
-            Ok(html_body) => {
-                return MovieExtractor::extract_movie_from_html(html_body.as_str(), url);
-            }
-            Err(e) => Err(e)
+            Ok(html_body) => MovieExtractor::extract_movie_from_html(html_body.as_str(), url),
+            Err(e) => Err(e),
         }
     }
 
@@ -186,7 +177,7 @@ impl FilmowClient {
             movies.push(movie);
         }
 
-        return movies.into_iter().flatten().collect();
+        movies.into_iter().flatten().collect()
     }
 }
 
