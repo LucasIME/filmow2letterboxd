@@ -27,7 +27,7 @@ impl FilmowClient {
                         preliminary_movies_info,
                     )
                     .await;
-                    println!("Movies for page {}: {:?}", page_num, page_movies);
+                    println!("Movies for watchlist page {}: {:?}", page_num, page_movies);
                     resp.append(&mut page_movies);
                 }
                 _ => break,
@@ -56,7 +56,7 @@ impl FilmowClient {
                         preliminary_movies_info,
                     )
                     .await;
-                    println!("Movies for page {}: {:?}", page_num, page_movies);
+                    println!("Movies for watched page {}: {:?}", page_num, page_movies);
                     resp.append(&mut page_movies);
                 }
                 Err(e) => {
