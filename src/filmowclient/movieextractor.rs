@@ -3,6 +3,8 @@ use select::predicate::And;
 use select::predicate::Class;
 use select::predicate::Name;
 
+use std::collections::HashSet;
+
 use crate::filmowclient::FilmowClient;
 use crate::filmowclient::Movie;
 use crate::filmowclient::PreliminaryMovieInformation;
@@ -69,17 +71,22 @@ impl MovieExtractor {
     pub fn get_preliminary_info_for_watchlist(
         watchlist_page_html: &str,
     ) -> Vec<PreliminaryMovieInformation> {
-        Document::from(watchlist_page_html)
+        // We convert into a set to remove duplicates, because the page has <a> with hrefs for
+        // both the title and the poster of the movie.
+        let movie_urls: HashSet<_> = Document::from(watchlist_page_html)
             .find(Name("a"))
             .filter(|n| n.attr("data-movie-pk").is_some())
             .map(|n| n.attr("href"))
             .flatten()
             .map(|x| FilmowClient::get_base_url() + &x.to_string())
+            .collect();
+
+        return movie_urls.into_iter()
             .map(|url| PreliminaryMovieInformation {
                 movie_url: url,
                 rating: None,
             })
-            .collect()
+            .collect();
     }
 
     pub fn get_preliminary_info_for_watched_movies(
