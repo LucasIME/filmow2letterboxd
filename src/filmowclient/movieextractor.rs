@@ -81,7 +81,8 @@ impl MovieExtractor {
             .map(|x| FilmowClient::get_base_url() + &x.to_string())
             .collect();
 
-        return movie_urls.into_iter()
+        return movie_urls
+            .into_iter()
             .map(|url| PreliminaryMovieInformation {
                 movie_url: url,
                 rating: None,
