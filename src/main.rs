@@ -1,6 +1,7 @@
 use std::env;
 use std::io;
 use std::io::prelude::*;
+use std::sync::Arc;
 
 mod filmowclient;
 use filmowclient::FilmowClient;
@@ -25,40 +26,17 @@ fn get_username() -> String {
 
 #[tokio::main]
 async fn main() {
-    let user = get_username();
-    let user_clone = user.clone();
+    let user = Arc::new(get_username());
 
-    let watchlist_file_name = "watchlist.csv";
-    let watched_movies_file_name = "watched.csv";
+    let movies_handle = tokio::spawn(fetch_and_save_movies(user.clone()));
+    let watchlist_handle = tokio::spawn(fetch_and_save_watchlist(user.clone()));
 
-    let watchlist_movies_handle =
-        tokio::spawn(
-            async move { FilmowClient::get_all_movies_from_watchlist(user.as_str()).await },
-        );
-    let watched_movies_handle =
-        tokio::spawn(
-            async move { FilmowClient::get_all_watched_movies(user_clone.as_str()).await },
-        );
-
-    match CsvWriter::save_movies_to_csv(watchlist_movies_handle.await.unwrap(), watchlist_file_name)
-    {
-        Err(e) => return println!("Error when saving watchlist: {:?}", e),
-        _ => println!(
-            "Successfully generated watchlist file: {}",
-            watchlist_file_name
-        ),
-    }
-
-    match CsvWriter::save_movies_to_csv(
-        watched_movies_handle.await.unwrap(),
-        watched_movies_file_name,
-    ) {
-        Err(e) => return println!("Error when saving watched movies: {:?}", e),
-        _ => println!(
-            "Successfully generated watched movies file: {}",
-            watched_movies_file_name
-        ),
-    }
+    movies_handle
+        .await
+        .expect("Error while fetching watched movie list");
+    watchlist_handle
+        .await
+        .expect("Error while fetching watchlist");
 
     println!(
         "Filmow2letterboxed has finished importing your Filmow profile! \
@@ -66,4 +44,30 @@ async fn main() {
          For more instructions on how to import these files to letterboxd, \
          go to https://github.com/LucasIME/filmow2letterboxd"
     );
+}
+
+async fn fetch_and_save_movies(user: Arc<String>) {
+    let watched_movies_file_name = "watched.csv";
+    let watched_movies = FilmowClient::get_all_watched_movies(user).await;
+
+    match CsvWriter::save_movies_to_csv(watched_movies, watched_movies_file_name) {
+        Err(e) => return println!("Error when saving watched movies: {:?}", e),
+        _ => println!(
+            "Successfully generated watched movies file: {}",
+            watched_movies_file_name
+        ),
+    }
+}
+
+async fn fetch_and_save_watchlist(user: Arc<String>) {
+    let watchlist_file_name = "watchlist.csv";
+    let watchlist_movies = FilmowClient::get_all_movies_from_watchlist(user).await;
+
+    match CsvWriter::save_movies_to_csv(watchlist_movies, watchlist_file_name) {
+        Err(e) => return println!("Error when saving watchlist: {:?}", e),
+        _ => println!(
+            "Successfully generated watchlist file: {}",
+            watchlist_file_name
+        ),
+    }
 }

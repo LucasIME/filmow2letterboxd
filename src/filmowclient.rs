@@ -3,75 +3,113 @@ use movieextractor::MovieExtractor;
 
 pub mod movie;
 use movie::Movie;
+use tokio_retry::strategy::{jitter, ExponentialBackoff};
+use tokio_retry::Retry;
+
+use std::sync::Arc;
 
 #[derive(Debug)]
 pub struct FilmowClient {}
 
 impl FilmowClient {
-    pub async fn get_all_movies_from_watchlist(user: &str) -> Vec<Movie> {
+    pub async fn get_all_movies_from_watchlist(user: Arc<String>) -> Vec<Movie> {
         println!("Fetching watchlist for user {}", user);
 
-        let number_of_pages = FilmowClient::get_last_watchlist_page_number(&user).await;
+        let number_of_pages = FilmowClient::get_last_watchlist_page_number(user.clone()).await;
         println!("Number of watchlist pages {:?}", number_of_pages);
 
         let mut resp = vec![];
+        let mut handles = vec![];
         for page_num in 1..=number_of_pages {
-            let watchlist_url = FilmowClient::get_watchlist_url_for_page(user, page_num);
-            match FilmowClient::get_html_from_url(watchlist_url.as_str()).await {
-                Ok(watchlist_page_html) => {
-                    let preliminary_movies_info =
-                        MovieExtractor::get_preliminary_info_for_watchlist(
-                            watchlist_page_html.as_str(),
-                        );
-                    let mut page_movies = FilmowClient::parallel_build_movie_from_preliminary_info(
-                        preliminary_movies_info,
-                    )
-                    .await;
-                    println!("Movies for watchlist page {}: {:?}", page_num, page_movies);
-                    resp.append(&mut page_movies);
-                }
-                _ => break,
-            }
+            let page_movies_handle = tokio::spawn(Self::get_all_movies_for_watchlist_page(
+                page_num,
+                user.clone(),
+            ));
+            handles.push(page_movies_handle)
+        }
+
+        for handle in handles {
+            let mut movies = handle.await.unwrap();
+            resp.append(&mut movies);
         }
 
         resp
     }
 
-    pub async fn get_all_watched_movies(user: &str) -> Vec<Movie> {
+    pub async fn get_all_movies_for_watchlist_page(page_num: i32, user: Arc<String>) -> Vec<Movie> {
+        println!("Processing watched movies page {}", page_num);
+
+        let watchlist_url = FilmowClient::get_watchlist_url_for_page(user, page_num);
+        match FilmowClient::get_html_from_url(watchlist_url.as_str()).await {
+            Ok(watchlist_page_html) => {
+                let preliminary_movies_info = MovieExtractor::get_preliminary_info_for_watchlist(
+                    watchlist_page_html.as_str(),
+                );
+                let page_movies = FilmowClient::parallel_build_movie_from_preliminary_info(
+                    preliminary_movies_info,
+                )
+                .await;
+                println!("Movies for watchlist page {}: {:?}", page_num, page_movies);
+                page_movies
+            }
+            _ => {
+                print!("Error fetching watchlist for page {}", page_num);
+                vec![]
+            }
+        }
+    }
+
+    pub async fn get_all_watched_movies(user: Arc<String>) -> Vec<Movie> {
         println!("Fetching watched movies for user {}", user);
 
-        let number_of_pages = FilmowClient::get_last_watched_page_number(&user).await;
+        let number_of_pages = FilmowClient::get_last_watched_page_number(user.clone()).await;
         println!("Number of watched movies pages {:?}", number_of_pages);
 
         let mut resp = vec![];
+        let mut handles = vec![];
         for page_num in 1..=number_of_pages {
-            let watched_url_for_page = FilmowClient::get_watched_url_for_page(user, page_num);
-            match FilmowClient::get_html_from_url(watched_url_for_page.as_str()).await {
-                Ok(watched_page_html) => {
-                    let preliminary_movies_info =
-                        MovieExtractor::get_preliminary_info_for_watched_movies(
-                            watched_page_html.as_str(),
-                        );
-                    let mut page_movies = FilmowClient::parallel_build_movie_from_preliminary_info(
-                        preliminary_movies_info,
-                    )
-                    .await;
-                    println!("Movies for watched page {}: {:?}", page_num, page_movies);
-                    resp.append(&mut page_movies);
-                }
-                Err(e) => {
-                    println!(
-                        "Failed to get html for url {}. Error: {}",
-                        watched_url_for_page, e
-                    );
-                    break;
-                }
-            }
+            let page_movies_handle = tokio::spawn(Self::get_all_movies_for_watched_page(
+                page_num,
+                user.clone(),
+            ));
+            handles.push(page_movies_handle)
+        }
+
+        for handle in handles {
+            let mut movies = handle.await.unwrap();
+            resp.append(&mut movies);
         }
         resp
     }
 
-    async fn get_last_watchlist_page_number(user: &str) -> i32 {
+    pub async fn get_all_movies_for_watched_page(page_num: i32, user: Arc<String>) -> Vec<Movie> {
+        println!("Processing watchlist page {}", page_num);
+
+        let watched_url_for_page = FilmowClient::get_watched_url_for_page(user, page_num);
+        match FilmowClient::get_html_from_url(watched_url_for_page.as_str()).await {
+            Ok(watched_page_html) => {
+                let preliminary_movies_info =
+                    MovieExtractor::get_preliminary_info_for_watched_movies(
+                        watched_page_html.as_str(),
+                    );
+                let page_movies = FilmowClient::parallel_build_movie_from_preliminary_info(
+                    preliminary_movies_info,
+                )
+                .await;
+                println!("Movies for watched page {}: {:?}", page_num, page_movies);
+                page_movies
+            }
+            Err(e) => {
+                println!(
+                    "Failed to get html for url {}. Error: {}",
+                    watched_url_for_page, e
+                );
+                vec![]
+            }
+        }
+    }
+
+    async fn get_last_watchlist_page_number(user: Arc<String>) -> i32 {
         println!("Getting total number of watchlist pages");
         let watchlist_url = FilmowClient::get_watchlist_url_for_page(user, 1);
         match FilmowClient::get_html_from_url(watchlist_url.as_str()).await {
@@ -84,7 +122,7 @@ impl FilmowClient {
         }
     }
 
-    async fn get_last_watched_page_number(user: &str) -> i32 {
+    async fn get_last_watched_page_number(user: Arc<String>) -> i32 {
         println!("Getting total number of watched pages");
         let watched_url = FilmowClient::get_watched_url_for_page(user, 1);
         match FilmowClient::get_html_from_url(watched_url.as_str()).await {
@@ -100,7 +138,7 @@ impl FilmowClient {
         "https://filmow.com".to_string()
     }
 
-    fn get_watchlist_url_for_page(user: &str, page: i32) -> String {
+    fn get_watchlist_url_for_page(user: Arc<String>, page: i32) -> String {
         if page == 1 {
             return format!("https://filmow.com/usuario/{}/quero-ver/", user);
         }
@@ -111,7 +149,7 @@ impl FilmowClient {
         )
     }
 
-    fn get_watched_url_for_page(user: &str, page: i32) -> String {
+    fn get_watched_url_for_page(user: Arc<String>, page: i32) -> String {
         if page == 1 {
             return format!("https://filmow.com/usuario/{}/ja-vi/", user);
         }
@@ -120,6 +158,14 @@ impl FilmowClient {
     }
 
     async fn get_html_from_url(url: &str) -> Result<String, String> {
+        let retry_strategy = ExponentialBackoff::from_millis(10).map(jitter).take(5);
+        Retry::spawn(retry_strategy, || async move {
+            Self::get_html_from_url_no_retry(url).await
+        })
+        .await
+    }
+
+    async fn get_html_from_url_no_retry(url: &str) -> Result<String, String> {
         match reqwest::get(url).await {
             Ok(resp) => {
                 if resp.status() == 404 {
@@ -154,8 +200,10 @@ impl FilmowClient {
         for info in info_vec {
             children.push(
                 tokio::spawn(async move {
+                println!("Fetching information for movie {}", info.movie_url);
                 match FilmowClient::get_movie_from_url(info.movie_url.as_str()).await {
                         Ok(movie) => {
+                            println!("Successfully fetched information for Movie {}", movie.title);
                             Some(Movie {
                                 title: movie.title,
                                 director: movie.director,
