@@ -48,7 +48,7 @@ async fn main() {
 
 async fn fetch_and_save_movies(user: Arc<String>) {
     let watched_movies_file_name = "watched.csv";
-    let watched_movies = FilmowClient::get_all_watched_movies(user.as_str()).await;
+    let watched_movies = FilmowClient::get_all_watched_movies(user).await;
 
     match CsvWriter::save_movies_to_csv(watched_movies, watched_movies_file_name) {
         Err(e) => return println!("Error when saving watched movies: {:?}", e),
@@ -61,7 +61,7 @@ async fn fetch_and_save_movies(user: Arc<String>) {
 
 async fn fetch_and_save_watchlist(user: Arc<String>) {
     let watchlist_file_name = "watchlist.csv";
-    let watchlist_movies = FilmowClient::get_all_movies_from_watchlist(user.as_str()).await;
+    let watchlist_movies = FilmowClient::get_all_movies_from_watchlist(user).await;
 
     match CsvWriter::save_movies_to_csv(watchlist_movies, watchlist_file_name) {
         Err(e) => return println!("Error when saving watchlist: {:?}", e),
