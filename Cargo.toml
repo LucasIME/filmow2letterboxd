@@ -7,7 +7,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-reqwest = "0.11.11"
-tokio = { version = "1.19.2", features = ["full"] }
-select = "0.5.0"
-csv = "1.1.6"
+reqwest = "0.11.12"
+tokio = { version = "1.32.0", features = ["full"] }
+select = "0.6.0"
+csv = "1.2.2"
