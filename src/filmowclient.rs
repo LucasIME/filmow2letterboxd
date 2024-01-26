@@ -32,6 +32,8 @@ impl FilmowClient {
     }
 
     pub async fn get_all_movies_for_watchlist_page(page_num: i32, user: Arc<String>) -> Vec<Movie> {
+            println!("Processing watched movies page {}", page_num);
+
             let watchlist_url = FilmowClient::get_watchlist_url_for_page(user, page_num);
             match FilmowClient::get_html_from_url(watchlist_url.as_str()).await {
                 Ok(watchlist_page_html) => {
@@ -74,6 +76,8 @@ impl FilmowClient {
     }
 
     pub async fn get_all_movies_for_watched_page(page_num: i32, user: Arc<String>) -> Vec<Movie> {
+            println!("Processing watchlist page {}", page_num);
+
             let watched_url_for_page = FilmowClient::get_watched_url_for_page(user, page_num);
             match FilmowClient::get_html_from_url(watched_url_for_page.as_str()).await {
                 Ok(watched_page_html) => {
@@ -181,8 +185,10 @@ impl FilmowClient {
         for info in info_vec {
             children.push(
                 tokio::spawn(async move {
+                println!("Fetching information for movie {}", info.movie_url);
                 match FilmowClient::get_movie_from_url(info.movie_url.as_str()).await {
                         Ok(movie) => {
+                            println!("Successfully fetched information for Movie {}", movie.title);
                             Some(Movie {
                                 title: movie.title,
                                 director: movie.director,
