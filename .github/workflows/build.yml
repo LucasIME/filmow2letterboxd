@@ -72,3 +72,12 @@ jobs:
  
           # Move the built binary where you want it
           mv "${BIN_OUTPUT}" "./out/${BIN_RELEASE}"
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./out/${PROJECT_NAME}-${{ matrix.name }}${{ matrix.runner == 'windows-latest' && '.exe' || '' }}
+          asset_name: ${{ github.ref_name }}-${{ matrix.name }}${{ matrix.runner == 'windows-latest' && '.exe' || '' }}
+          asset_content_type: application/octet-stream
