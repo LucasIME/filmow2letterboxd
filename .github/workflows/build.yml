@@ -41,9 +41,11 @@ jobs:
       - name: Build Binary
         run: cargo build --verbose --locked --release --target ${{ matrix.target }}
       
-      - name: List files
+      - name: Mkdir out folder and list files
         shell: bash
-        run: "ls target/**"
+        run: |
+          mkdir out
+          ls target/**
  
       - name: Release Binary
         shell: bash
