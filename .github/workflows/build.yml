@@ -40,6 +40,10 @@ jobs:
  
       - name: Build Binary
         run: cargo build --verbose --locked --release --target ${{ matrix.target }}
+      
+      - name: List files
+        shell: bash
+        run: "ls target/**"
  
       - name: Release Binary
         shell: bash
