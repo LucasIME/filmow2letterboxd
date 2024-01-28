@@ -1,6 +1,6 @@
 name: Build
 on:
-  worflow_run:
+  workflow_run:
     workflows: [GitHub Actions Demo]
     types:
       - completed
