@@ -7,7 +7,6 @@ env:
   PROJECT_NAME: filmow2letterboxd
 jobs:
   build-and-upload:
-    needs: create-release
     # Set the job to run on the platform specified by the matrix below
     runs-on: ${{ matrix.runner }}
  
