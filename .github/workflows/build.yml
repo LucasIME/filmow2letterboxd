@@ -7,14 +7,8 @@ jobs:
   create-release:
     runs-on: ubuntu-latest
     outputs:
-      tag: ${{ steps.tag.outputs.tag }}
       upload_url: ${{ steps.create-new-release.outputs.upload_url }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Get tag name
-        id: tag
-        run: echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
       - name: Create Release
         id: create-new-release
         uses: actions/create-release@v1
@@ -50,11 +44,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Verify can get previous
-        run: |
-          echo ${{ needs.create-release.outputs.tag }}
-          echo ${{ needs.create-release.outputs.upload_url }}
- 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -96,5 +85,5 @@ jobs:
         with:
           upload_url: ${{ needs.create-release.outputs.upload_url }}
           asset_path: ./out/filmow2letterboxd-${{ matrix.name }}${{ matrix.runner == 'windows-latest' && '.exe' || '' }}
-          asset_name: filmow2letterboxd-v${{ github.run_number }}-${{ matrix.name }}${{ matrix.runner == 'windows-latest' && '.exe' || '' }}
+          asset_name: filmow2letterboxd-v${{ github.ref_name }}-${{ matrix.name }}${{ matrix.runner == 'windows-latest' && '.exe' || '' }}
           asset_content_type: application/octet-stream
