@@ -1,9 +1,5 @@
 name: Build
-on:
-  workflow_run:
-    workflows: [GitHub Actions Demo]
-    types:
-      - completed
+on: [push]
 env:
   # The project name specified in your Cargo.toml
   PROJECT_NAME: filmow2letterboxd
@@ -41,6 +37,14 @@ jobs:
  
       - name: Setup Cache
         uses: Swatinem/rust-cache@v2
+
+      - name: Create Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.run_number }}
+          release_name: ${{ github.run_number }}
  
       - name: Build Binary
         run: cargo build --verbose --locked --release --target ${{ matrix.target }}
