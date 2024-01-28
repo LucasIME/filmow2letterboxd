@@ -79,6 +79,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create-new-release.outputs.upload_url }}
-          asset_path: ./out/${PROJECT_NAME}-${{ matrix.name }}${{ matrix.runner == 'windows-latest' && '.exe' || '' }}
+          asset_path: ./out/filmow2letterboxd-${{ matrix.name }}${{ matrix.runner == 'windows-latest' && '.exe' || '' }}
           asset_name: ${{ github.ref_name }}-${{ matrix.name }}${{ matrix.runner == 'windows-latest' && '.exe' || '' }}
           asset_content_type: application/octet-stream
