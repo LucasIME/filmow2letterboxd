@@ -1,5 +1,9 @@
 name: Build
-on: [push]
+on:
+  worflow_run:
+    workflows: [GitHub Actions Demo]
+    types:
+      - completed
 env:
   # The project name specified in your Cargo.toml
   PROJECT_NAME: filmow2letterboxd
