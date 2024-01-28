@@ -1,5 +1,10 @@
 name: Build
-on: [push]
+on:
+  push:
+    tags:
+      - v**
+    branches:
+      - master
 env:
   # The project name specified in your Cargo.toml
   PROJECT_NAME: filmow2letterboxd
