@@ -1,0 +1,94 @@
+name: Build
+on:
+  push:
+    tags:
+      - v**
+    branches:
+      - master
+env:
+  # The project name specified in your Cargo.toml
+  PROJECT_NAME: filmow2letterboxd
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create-new-release.outputs.upload_url }}
+    steps:
+      - name: Create Release
+        id: create-new-release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: ${{ github.ref_name }}
+  build-and-upload:
+    needs: create-release
+    # Set the job to run on the platform specified by the matrix below
+    runs-on: ${{ matrix.runner }}
+ 
+    # Define the build matrix for cross-compilation
+    strategy:
+      matrix:
+        include:
+          - name: linux-amd64
+            runner: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - name: win-amd64
+            runner: windows-latest
+            target: x86_64-pc-windows-msvc
+          - name: macos-amd64
+            runner: macos-latest
+            target: x86_64-apple-darwin
+          - name: macos-arm64
+            runner: macos-latest
+            target: aarch64-apple-darwin
+ 
+    # The steps to run for each matrix item
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: "${{ matrix.target }}"
+ 
+      - name: Setup Cache
+        uses: Swatinem/rust-cache@v2
+ 
+      - name: Build Binary
+        run: cargo build --verbose --locked --release --target ${{ matrix.target }}
+      
+      - name: Mkdir out folder and list files
+        shell: bash
+        run: |
+          mkdir out
+          ls target/**
+ 
+      - name: Release Binary
+        shell: bash
+        run: |
+          BIN_SUFFIX=""
+          if [[ "${{ matrix.runner }}" == "windows-latest" ]]; then
+            BIN_SUFFIX=".exe"
+          fi
+ 
+          # The built binary output location
+          BIN_OUTPUT="target/${{ matrix.target }}/release/${PROJECT_NAME}${BIN_SUFFIX}"
+ 
+          # Define a better name for the final binary
+          BIN_RELEASE="${PROJECT_NAME}-${{ matrix.name }}${BIN_SUFFIX}"
+          BIN_RELEASE_VERSIONED="${PROJECT_NAME}-${{ github.ref_name }}-${{ matrix.name }}${BIN_SUFFIX}"
+ 
+          # Move the built binary where you want it
+          mv "${BIN_OUTPUT}" "./out/${BIN_RELEASE}"
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ./out/filmow2letterboxd-${{ matrix.name }}${{ matrix.runner == 'windows-latest' && '.exe' || '' }}
+          asset_name: filmow2letterboxd-v${{ github.ref_name }}-${{ matrix.name }}${{ matrix.runner == 'windows-latest' && '.exe' || '' }}
+          asset_content_type: application/octet-stream
