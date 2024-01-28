@@ -1,27 +1,11 @@
 name: Build
 on:
-  push:
-    tags:
-      - v**
-    branches:
-      - master
+  release:
+    types: [published]
 env:
   # The project name specified in your Cargo.toml
   PROJECT_NAME: filmow2letterboxd
 jobs:
-  create-release:
-    runs-on: ubuntu-latest
-    outputs:
-      upload_url: ${{ steps.create-new-release.outputs.upload_url }}
-    steps:
-      - name: Create Release
-        id: create-new-release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref_name }}
-          release_name: ${{ github.ref_name }}
   build-and-upload:
     needs: create-release
     # Set the job to run on the platform specified by the matrix below
@@ -48,6 +32,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+
+      - name: Get release
+        id: get_release
+        uses: bruceadams/get-release@v1.3.2
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -88,7 +78,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          upload_url: ${{ steps.get_release.outputs.upload_url }}
           asset_path: ./out/filmow2letterboxd-${{ matrix.name }}${{ matrix.runner == 'windows-latest' && '.exe' || '' }}
           asset_name: filmow2letterboxd-v${{ github.ref_name }}-${{ matrix.name }}${{ matrix.runner == 'windows-latest' && '.exe' || '' }}
           asset_content_type: application/octet-stream
