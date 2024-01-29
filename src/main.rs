@@ -88,8 +88,11 @@ mod tests {
             .output()
             .expect("failed to execute process");
 
-        let logs = std::str::from_utf8(&output.stdout).unwrap();
-        println!("logs: {}", logs);
+        let stdout = std::str::from_utf8(&output.stdout).unwrap();
+        println!("stdout: {}", stdout);
+
+        let stderr= std::str::from_utf8(&output.stderr).unwrap();
+        println!("stderr: {}", stderr);
 
         let expected_watchlist_content =
             get_file_content("./tests/resources/expected_watchlist_azael.csv");
