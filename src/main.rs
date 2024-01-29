@@ -1,7 +1,4 @@
-use std::env;
-use std::io;
-use std::io::prelude::*;
-use std::sync::Arc;
+use std::{env, io, io::prelude::*, sync::Arc};
 
 mod clients;
 use clients::filmow_client::FilmowClient;

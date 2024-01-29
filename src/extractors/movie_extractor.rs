@@ -1,12 +1,14 @@
-use select::document::Document;
-use select::predicate::And;
-use select::predicate::Class;
-use select::predicate::Name;
+use select::{
+    document::Document,
+    predicate::{And, Class, Name},
+};
 
 use std::collections::HashSet;
 
-use crate::clients::filmow_client::{FilmowClient, PreliminaryMovieInformation};
-use crate::model::movie::Movie;
+use crate::{
+    clients::filmow_client::{FilmowClient, PreliminaryMovieInformation},
+    model::movie::Movie,
+};
 
 #[derive(Debug)]
 pub struct MovieExtractor {}

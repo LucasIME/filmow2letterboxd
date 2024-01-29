@@ -1,8 +1,9 @@
 use std::sync::Arc;
 
-use crate::clients::filmow_client::FilmowClient;
-use crate::extractors::movie_extractor::MovieExtractor;
-use crate::model::movie::Movie;
+use crate::{
+    clients::filmow_client::FilmowClient, extractors::movie_extractor::MovieExtractor,
+    model::movie::Movie,
+};
 
 pub struct WatchedMoviesFetcher {}
 

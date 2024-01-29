@@ -1,13 +1,16 @@
 use crate::extractors::movie_extractor::MovieExtractor;
 
 use crate::model::movie::Movie;
-use tokio_retry::strategy::{jitter, ExponentialBackoff};
-use tokio_retry::Retry;
+use tokio_retry::{
+    strategy::{jitter, ExponentialBackoff},
+    Retry,
+};
 
 use std::sync::Arc;
 
-use crate::fetchers::watched_list_fetcher::WatchedMoviesFetcher;
-use crate::fetchers::watchlist_fetcher::WatchlistFetcher;
+use crate::fetchers::{
+    watched_list_fetcher::WatchedMoviesFetcher, watchlist_fetcher::WatchlistFetcher,
+};
 
 #[derive(Debug)]
 pub struct FilmowClient {}
