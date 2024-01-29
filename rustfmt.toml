@@ -1,0 +1,2 @@
+imports_granularity = "crate" # controls the grouping of imports
+reorder_imports = true # sorts imports alphabetically
