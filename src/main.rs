@@ -3,11 +3,16 @@ use std::io;
 use std::io::prelude::*;
 use std::sync::Arc;
 
-mod filmowclient;
-use filmowclient::FilmowClient;
+mod clients;
+use clients::filmow_client::FilmowClient;
 
-mod csvwriter;
-use csvwriter::CsvWriter;
+mod extractors;
+mod model;
+
+mod persisters;
+use persisters::csv_writer::CsvWriter;
+
+mod fetchers;
 
 fn get_username() -> String {
     match env::args().nth(1) {

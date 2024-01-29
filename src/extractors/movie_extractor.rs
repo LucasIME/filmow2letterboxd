@@ -5,9 +5,8 @@ use select::predicate::Name;
 
 use std::collections::HashSet;
 
-use crate::filmowclient::FilmowClient;
-use crate::filmowclient::Movie;
-use crate::filmowclient::PreliminaryMovieInformation;
+use crate::clients::filmow_client::{FilmowClient, PreliminaryMovieInformation};
+use crate::model::movie::Movie;
 
 #[derive(Debug)]
 pub struct MovieExtractor {}
