@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, PartialOrd, PartialEq)]
 pub struct Movie {
     pub title: String,
     pub director: String,

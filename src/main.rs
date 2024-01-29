@@ -50,7 +50,8 @@ async fn main() {
 
 async fn fetch_and_save_movies(user: Arc<String>) {
     let watched_movies_file_name = "watched.csv";
-    let watched_movies = FilmowClient::get_all_watched_movies(user).await;
+    let mut watched_movies = FilmowClient::get_all_watched_movies(user).await;
+    watched_movies.sort_by_key(|movie| movie.title.clone());
 
     match CsvWriter::save_movies_to_csv(watched_movies, watched_movies_file_name) {
         Err(e) => return println!("Error when saving watched movies: {:?}", e),
@@ -63,7 +64,8 @@ async fn fetch_and_save_movies(user: Arc<String>) {
 
 async fn fetch_and_save_watchlist(user: Arc<String>) {
     let watchlist_file_name = "watchlist.csv";
-    let watchlist_movies = FilmowClient::get_all_movies_from_watchlist(user).await;
+    let mut watchlist_movies = FilmowClient::get_all_movies_from_watchlist(user).await;
+    watchlist_movies.sort_by_key(|movie| movie.title.clone());
 
     match CsvWriter::save_movies_to_csv(watchlist_movies, watchlist_file_name) {
         Err(e) => return println!("Error when saving watchlist: {:?}", e),
@@ -71,5 +73,51 @@ async fn fetch_and_save_watchlist(user: Arc<String>) {
             "Successfully generated watchlist file: {}",
             watchlist_file_name
         ),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use std::{fs::File, io::Read, process::Command};
+
+    #[test]
+    fn outputs_azael_profile_correctly() {
+        let output = Command::new("cargo")
+            .args(&["run", "azael"])
+            .output()
+            .expect("failed to execute process");
+
+        let stdout = std::str::from_utf8(&output.stdout).unwrap();
+        println!("stdout: {}", stdout);
+
+        let stderr= std::str::from_utf8(&output.stderr).unwrap();
+        println!("stderr: {}", stderr);
+
+        let expected_watchlist_content =
+            get_file_content("./tests/resources/expected_watchlist_azael.csv");
+        let watchlist_content = get_file_content("./watchlist.csv");
+
+        let expected_watched_list_content =
+            get_file_content("./tests/resources/expected_watched_list_azael.csv");
+        let watched_list_content = get_file_content("./watched.csv");
+
+        assert_eq!(watchlist_content, expected_watchlist_content);
+        assert_eq!(watched_list_content, expected_watched_list_content);
+    }
+
+    fn get_file_content(file_path: &str) -> String {
+        let mut file = match File::open(file_path) {
+            Ok(file) => file,
+            Err(e) => panic!("Error opening expected watchlist file: {}", e),
+        };
+
+        let mut content = String::new();
+        if let Err(e) = file.read_to_string(&mut content) {
+            eprintln!("Error reading the file: {}", e);
+            panic!("Failed to read file");
+        }
+
+        return content;
     }
 }
