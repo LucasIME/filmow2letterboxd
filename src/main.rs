@@ -83,10 +83,13 @@ mod tests {
 
     #[test]
     fn outputs_azael_profile_correctly() {
-        let _output = Command::new("cargo")
+        let output = Command::new("cargo")
             .args(&["run", "azael"])
             .output()
             .expect("failed to execute process");
+
+        let logs = std::str::from_utf8(&output.stdout).unwrap();
+        println!("logs: {}", logs);
 
         let expected_watchlist_content =
             get_file_content("./tests/resources/expected_watchlist_azael.csv");
