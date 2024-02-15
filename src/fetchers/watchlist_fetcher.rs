@@ -5,22 +5,34 @@ use crate::{
     model::movie::Movie,
 };
 
-pub struct WatchlistFetcher {}
+#[derive(Clone)]
+pub struct WatchlistFetcher {
+    filmow_client: FilmowClient,
+}
 
 impl WatchlistFetcher {
-    pub async fn get_all_movies_from_watchlist(user: Arc<String>) -> Vec<Movie> {
+    pub fn new(filmow_client: FilmowClient) -> Self {
+        WatchlistFetcher { filmow_client }
+    }
+
+    pub async fn get_all_movies_from_watchlist(&self, user: Arc<String>) -> Vec<Movie> {
         println!("Fetching watchlist for user {}", user);
 
-        let number_of_pages = Self::get_last_watchlist_page_number(user.clone()).await;
+        let number_of_pages = self.get_last_watchlist_page_number(user.clone()).await;
         println!("Number of watchlist pages {:?}", number_of_pages);
 
         let mut resp = vec![];
         let mut handles = vec![];
+
         for page_num in 1..=number_of_pages {
-            let page_movies_handle = tokio::spawn(Self::get_all_movies_for_watchlist_page(
-                page_num,
-                user.clone(),
-            ));
+            let self_clone = self.clone();
+            let user_clone = user.clone();
+
+            let page_movies_handle = tokio::spawn(async move {
+                self_clone
+                    .get_all_movies_for_watchlist_page(page_num, user_clone)
+                    .await
+            });
             handles.push(page_movies_handle)
         }
 
@@ -32,19 +44,27 @@ impl WatchlistFetcher {
         resp
     }
 
-    pub async fn get_all_movies_for_watchlist_page(page_num: i32, user: Arc<String>) -> Vec<Movie> {
+    pub async fn get_all_movies_for_watchlist_page(
+        &self,
+        page_num: i32,
+        user: Arc<String>,
+    ) -> Vec<Movie> {
         println!("Processing watched movies page {}", page_num);
 
         let watchlist_url = Self::get_watchlist_url_for_page(user, page_num);
-        match FilmowClient::get_html_from_url(watchlist_url.as_str()).await {
+        match self
+            .filmow_client
+            .get_html_from_url(watchlist_url.as_str())
+            .await
+        {
             Ok(watchlist_page_html) => {
                 let preliminary_movies_info = MovieExtractor::get_preliminary_info_for_watchlist(
                     watchlist_page_html.as_str(),
                 );
-                let page_movies = FilmowClient::parallel_build_movie_from_preliminary_info(
-                    preliminary_movies_info,
-                )
-                .await;
+                let page_movies = self
+                    .filmow_client
+                    .parallel_build_movie_from_preliminary_info(preliminary_movies_info)
+                    .await;
                 println!("Movies for watchlist page {}: {:?}", page_num, page_movies);
                 page_movies
             }
@@ -55,10 +75,14 @@ impl WatchlistFetcher {
         }
     }
 
-    async fn get_last_watchlist_page_number(user: Arc<String>) -> i32 {
+    async fn get_last_watchlist_page_number(&self, user: Arc<String>) -> i32 {
         println!("Getting total number of watchlist pages");
         let watchlist_url = Self::get_watchlist_url_for_page(user, 1);
-        match FilmowClient::get_html_from_url(watchlist_url.as_str()).await {
+        match self
+            .filmow_client
+            .get_html_from_url(watchlist_url.as_str())
+            .await
+        {
             Ok(watchlist_page_html) => {
                 MovieExtractor::get_last_page_from_html(watchlist_page_html.as_str()).unwrap_or(1)
             }
