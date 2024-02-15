@@ -54,7 +54,7 @@ async fn main() {
 
 async fn fetch_and_save_movies(client: Arc<FilmowClient>, user: Arc<String>) {
     let watched_movies_file_name = "watched.csv";
-    let mut watched_movies = client.get_all_watched_movies(user).await;
+    let mut watched_movies = FilmowClient::get_all_watched_movies(client, user).await;
     watched_movies.sort_by_key(|movie| movie.title.clone());
 
     match CsvWriter::save_movies_to_csv(watched_movies, watched_movies_file_name) {
@@ -68,7 +68,7 @@ async fn fetch_and_save_movies(client: Arc<FilmowClient>, user: Arc<String>) {
 
 async fn fetch_and_save_watchlist(client: Arc<FilmowClient>, user: Arc<String>) {
     let watchlist_file_name = "watchlist.csv";
-    let mut watchlist_movies = client.get_all_movies_from_watchlist(user).await;
+    let mut watchlist_movies = FilmowClient::get_all_movies_from_watchlist(client, user).await;
     watchlist_movies.sort_by_key(|movie| movie.title.clone());
 
     match CsvWriter::save_movies_to_csv(watchlist_movies, watchlist_file_name) {

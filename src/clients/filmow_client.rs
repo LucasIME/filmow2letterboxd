@@ -26,14 +26,20 @@ impl FilmowClient {
         }
     }
 
-    pub async fn get_all_movies_from_watchlist(&self, user: Arc<String>) -> Vec<Movie> {
-        let watchlist_fetcher = WatchlistFetcher::new(self.clone());
-        watchlist_fetcher.get_all_movies_from_watchlist(user).await
+    pub async fn get_all_movies_from_watchlist(
+        shared_self: Arc<FilmowClient>,
+        user: Arc<String>,
+    ) -> Vec<Movie> {
+        let watchlist_fetcher = WatchlistFetcher::new(shared_self.clone());
+        WatchlistFetcher::get_all_movies_from_watchlist(Arc::new(watchlist_fetcher), user).await
     }
 
-    pub async fn get_all_watched_movies(&self, user: Arc<String>) -> Vec<Movie> {
-        let watched_list_fetcher = WatchedMoviesFetcher::new(self.clone());
-        watched_list_fetcher.get_all_watched_movies(user).await
+    pub async fn get_all_watched_movies(
+        shared_self: Arc<FilmowClient>,
+        user: Arc<String>,
+    ) -> Vec<Movie> {
+        let watched_list_fetcher = WatchedMoviesFetcher::new(shared_self.clone());
+        WatchedMoviesFetcher::get_all_watched_movies(Arc::new(watched_list_fetcher), user).await
     }
 
     pub fn get_base_url() -> String {

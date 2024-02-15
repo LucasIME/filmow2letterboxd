@@ -7,25 +7,30 @@ use crate::{
 
 #[derive(Clone)]
 pub struct WatchlistFetcher {
-    filmow_client: FilmowClient,
+    filmow_client: Arc<FilmowClient>,
 }
 
 impl WatchlistFetcher {
-    pub fn new(filmow_client: FilmowClient) -> Self {
+    pub fn new(filmow_client: Arc<FilmowClient>) -> Self {
         WatchlistFetcher { filmow_client }
     }
 
-    pub async fn get_all_movies_from_watchlist(&self, user: Arc<String>) -> Vec<Movie> {
+    pub async fn get_all_movies_from_watchlist(
+        shared_self: Arc<WatchlistFetcher>,
+        user: Arc<String>,
+    ) -> Vec<Movie> {
         println!("Fetching watchlist for user {}", user);
 
-        let number_of_pages = self.get_last_watchlist_page_number(user.clone()).await;
+        let number_of_pages = shared_self
+            .get_last_watchlist_page_number(user.clone())
+            .await;
         println!("Number of watchlist pages {:?}", number_of_pages);
 
         let mut resp = vec![];
         let mut handles = vec![];
 
         for page_num in 1..=number_of_pages {
-            let self_clone = self.clone();
+            let self_clone = shared_self.clone();
             let user_clone = user.clone();
 
             let page_movies_handle = tokio::spawn(async move {
