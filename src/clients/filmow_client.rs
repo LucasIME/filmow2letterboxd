@@ -83,13 +83,13 @@ impl FilmowClient {
     }
 
     pub async fn parallel_build_movie_from_preliminary_info(
-        &self,
+        shared_self: Arc<FilmowClient>,
         info_vec: Vec<PreliminaryMovieInformation>,
     ) -> Vec<Movie> {
         let mut children = vec![];
 
         for info in info_vec {
-            let self_clone = self.clone();
+            let self_clone = shared_self.clone();
             children.push(
                 tokio::spawn(async move {
                 println!("Fetching information for movie {}", info.movie_url);

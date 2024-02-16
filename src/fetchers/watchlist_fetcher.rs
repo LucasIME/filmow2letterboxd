@@ -66,10 +66,11 @@ impl WatchlistFetcher {
                 let preliminary_movies_info = MovieExtractor::get_preliminary_info_for_watchlist(
                     watchlist_page_html.as_str(),
                 );
-                let page_movies = self
-                    .filmow_client
-                    .parallel_build_movie_from_preliminary_info(preliminary_movies_info)
-                    .await;
+                let page_movies = FilmowClient::parallel_build_movie_from_preliminary_info(
+                    self.filmow_client.clone(),
+                    preliminary_movies_info,
+                )
+                .await;
                 println!("Movies for watchlist page {}: {:?}", page_num, page_movies);
                 page_movies
             }
