@@ -28,10 +28,14 @@ fn get_username() -> String {
 
 #[tokio::main]
 async fn main() {
+    let filmow_client = Arc::new(FilmowClient::new());
     let user = Arc::new(get_username());
 
-    let movies_handle = tokio::spawn(fetch_and_save_movies(user.clone()));
-    let watchlist_handle = tokio::spawn(fetch_and_save_watchlist(user.clone()));
+    let movies_handle = tokio::spawn(fetch_and_save_movies(filmow_client.clone(), user.clone()));
+    let watchlist_handle = tokio::spawn(fetch_and_save_watchlist(
+        filmow_client.clone(),
+        user.clone(),
+    ));
 
     movies_handle
         .await
@@ -48,9 +52,9 @@ async fn main() {
     );
 }
 
-async fn fetch_and_save_movies(user: Arc<String>) {
+async fn fetch_and_save_movies(client: Arc<FilmowClient>, user: Arc<String>) {
     let watched_movies_file_name = "watched.csv";
-    let mut watched_movies = FilmowClient::get_all_watched_movies(user).await;
+    let mut watched_movies = FilmowClient::get_all_watched_movies(client, user).await;
     watched_movies.sort_by_key(|movie| movie.title.clone());
 
     match CsvWriter::save_movies_to_csv(watched_movies, watched_movies_file_name) {
@@ -62,9 +66,9 @@ async fn fetch_and_save_movies(user: Arc<String>) {
     }
 }
 
-async fn fetch_and_save_watchlist(user: Arc<String>) {
+async fn fetch_and_save_watchlist(client: Arc<FilmowClient>, user: Arc<String>) {
     let watchlist_file_name = "watchlist.csv";
-    let mut watchlist_movies = FilmowClient::get_all_movies_from_watchlist(user).await;
+    let mut watchlist_movies = FilmowClient::get_all_movies_from_watchlist(client, user).await;
     watchlist_movies.sort_by_key(|movie| movie.title.clone());
 
     match CsvWriter::save_movies_to_csv(watchlist_movies, watchlist_file_name) {
@@ -91,7 +95,7 @@ mod tests {
         let stdout = std::str::from_utf8(&output.stdout).unwrap();
         println!("stdout: {}", stdout);
 
-        let stderr= std::str::from_utf8(&output.stderr).unwrap();
+        let stderr = std::str::from_utf8(&output.stderr).unwrap();
         println!("stderr: {}", stderr);
 
         let expected_watchlist_content =
