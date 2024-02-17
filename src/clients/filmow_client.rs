@@ -92,10 +92,10 @@ impl FilmowClient {
             let self_clone = shared_self.clone();
             children.push(
                 tokio::spawn(async move {
-                println!("Fetching information for movie {}", info.movie_url);
+                log::info!("Fetching information for movie {}", info.movie_url);
                 match self_clone.get_movie_from_url(info.movie_url.as_str()).await {
                         Ok(movie) => {
-                            println!("Successfully fetched information for Movie {}", movie.title);
+                            log::info!("Successfully fetched information for Movie {}", movie.title);
                             Some(Movie {
                                 title: movie.title,
                                 director: movie.director,
@@ -104,7 +104,7 @@ impl FilmowClient {
                             })
                         }
                         Err(e) => {
-                            println!("Could not construct movie from url {}. Ignoring it and continuing. Error was: {}", info.movie_url, e);
+                            log::error!("Could not construct movie from url {}. Ignoring it and continuing. Error was: {}", info.movie_url, e);
                             return None;
                         }
                     }

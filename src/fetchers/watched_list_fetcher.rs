@@ -19,10 +19,10 @@ impl WatchedMoviesFetcher {
         shared_self: Arc<WatchedMoviesFetcher>,
         user: Arc<String>,
     ) -> Vec<Movie> {
-        println!("Fetching watched movies for user {}", user);
+        log::info!("Fetching watched movies for user {}", user);
 
         let number_of_pages = shared_self.get_last_watched_page_number(user.clone()).await;
-        println!("Number of watched movies pages {:?}", number_of_pages);
+        log::info!("Number of watched movies pages {:?}", number_of_pages);
 
         let mut resp = vec![];
         let mut handles = vec![];
@@ -66,13 +66,14 @@ impl WatchedMoviesFetcher {
                     preliminary_movies_info,
                 )
                 .await;
-                println!("Movies for watched page {}: {:?}", page_num, page_movies);
+                log::info!("Movies for watched page {}: {:?}", page_num, page_movies);
                 page_movies
             }
             Err(e) => {
-                println!(
+                log::error!(
                     "Failed to get html for url {}. Error: {}",
-                    watched_url_for_page, e
+                    watched_url_for_page,
+                    e
                 );
                 vec![]
             }
@@ -80,7 +81,7 @@ impl WatchedMoviesFetcher {
     }
 
     async fn get_last_watched_page_number(&self, user: Arc<String>) -> i32 {
-        println!("Getting total number of watched pages");
+        log::info!("Getting total number of watched pages");
         let watched_url = Self::get_watched_url_for_page(user, 1);
         match self
             .filmow_client
