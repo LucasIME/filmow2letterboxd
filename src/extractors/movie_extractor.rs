@@ -109,7 +109,7 @@ impl MovieExtractor {
     pub fn get_last_page_from_html(page_html: &str) -> Option<i32> {
         let document = Document::from(page_html);
 
-        println!("Retrieved html: {}", page_html);
+        log::debug!("Retrieved html: {}", page_html);
 
         document
             .find(Name("a"))

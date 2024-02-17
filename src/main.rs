@@ -11,6 +11,8 @@ use persisters::csv_writer::CsvWriter;
 
 mod fetchers;
 
+mod logging;
+
 fn get_username() -> String {
     match env::args().nth(1) {
         None => {
@@ -28,6 +30,8 @@ fn get_username() -> String {
 
 #[tokio::main]
 async fn main() {
+    logging::setup_logging();
+
     let filmow_client = Arc::new(FilmowClient::new());
     let user = Arc::new(get_username());
 
@@ -44,7 +48,7 @@ async fn main() {
         .await
         .expect("Error while fetching watchlist");
 
-    println!(
+    log::info!(
         "Filmow2letterboxed has finished importing your Filmow profile! \
          You should be able to find .csv files in the same directory of the executable. \
          For more instructions on how to import these files to letterboxd, \
@@ -58,8 +62,8 @@ async fn fetch_and_save_movies(client: Arc<FilmowClient>, user: Arc<String>) {
     watched_movies.sort_by_key(|movie| movie.title.clone());
 
     match CsvWriter::save_movies_to_csv(watched_movies, watched_movies_file_name) {
-        Err(e) => return println!("Error when saving watched movies: {:?}", e),
-        _ => println!(
+        Err(e) => return log::error!("Error when saving watched movies: {:?}", e),
+        _ => log::info!(
             "Successfully generated watched movies file: {}",
             watched_movies_file_name
         ),
@@ -72,8 +76,8 @@ async fn fetch_and_save_watchlist(client: Arc<FilmowClient>, user: Arc<String>) 
     watchlist_movies.sort_by_key(|movie| movie.title.clone());
 
     match CsvWriter::save_movies_to_csv(watchlist_movies, watchlist_file_name) {
-        Err(e) => return println!("Error when saving watchlist: {:?}", e),
-        _ => println!(
+        Err(e) => return log::error!("Error when saving watchlist: {:?}", e),
+        _ => log::info!(
             "Successfully generated watchlist file: {}",
             watchlist_file_name
         ),
@@ -87,16 +91,10 @@ mod tests {
 
     #[test]
     fn outputs_azael_profile_correctly() {
-        let output = Command::new("cargo")
+        let _output = Command::new("cargo")
             .args(&["run", "azael"])
             .output()
             .expect("failed to execute process");
-
-        let stdout = std::str::from_utf8(&output.stdout).unwrap();
-        println!("stdout: {}", stdout);
-
-        let stderr = std::str::from_utf8(&output.stderr).unwrap();
-        println!("stderr: {}", stderr);
 
         let expected_watchlist_content =
             get_file_content("./tests/resources/expected_watchlist_azael.csv");

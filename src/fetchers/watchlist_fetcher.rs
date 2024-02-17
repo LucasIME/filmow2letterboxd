@@ -19,12 +19,12 @@ impl WatchlistFetcher {
         shared_self: Arc<WatchlistFetcher>,
         user: Arc<String>,
     ) -> Vec<Movie> {
-        println!("Fetching watchlist for user {}", user);
+        log::info!("Fetching watchlist for user {}", user);
 
         let number_of_pages = shared_self
             .get_last_watchlist_page_number(user.clone())
             .await;
-        println!("Number of watchlist pages {:?}", number_of_pages);
+        log::info!("Number of watchlist pages {:?}", number_of_pages);
 
         let mut resp = vec![];
         let mut handles = vec![];
@@ -54,7 +54,7 @@ impl WatchlistFetcher {
         page_num: i32,
         user: Arc<String>,
     ) -> Vec<Movie> {
-        println!("Processing watched movies page {}", page_num);
+        log::info!("Processing watched movies page {}", page_num);
 
         let watchlist_url = Self::get_watchlist_url_for_page(user, page_num);
         match self
@@ -71,18 +71,18 @@ impl WatchlistFetcher {
                     preliminary_movies_info,
                 )
                 .await;
-                println!("Movies for watchlist page {}: {:?}", page_num, page_movies);
+                log::info!("Movies for watchlist page {}: {:?}", page_num, page_movies);
                 page_movies
             }
             _ => {
-                print!("Error fetching watchlist for page {}", page_num);
+                log::error!("Error fetching watchlist for page {}", page_num);
                 vec![]
             }
         }
     }
 
     async fn get_last_watchlist_page_number(&self, user: Arc<String>) -> i32 {
-        println!("Getting total number of watchlist pages");
+        log::info!("Getting total number of watchlist pages");
         let watchlist_url = Self::get_watchlist_url_for_page(user, 1);
         match self
             .filmow_client
