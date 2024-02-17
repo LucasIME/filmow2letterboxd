@@ -24,7 +24,7 @@ impl MovieExtractor {
         }
 
         if director.is_none() {
-            return Err(format!("Could not extract director from page: {}", url));
+            log::error!("Could not extract director from page: {}, but continuing", url);
         }
 
         if year.is_none() {
@@ -33,7 +33,7 @@ impl MovieExtractor {
 
         Ok(Movie {
             title: title.unwrap(),
-            director: director.unwrap(),
+            director: director,
             year: year.unwrap(),
             rating: None,
         })
