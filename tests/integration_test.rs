@@ -1,14 +1,11 @@
 #[cfg(test)]
 mod tests {
 
-    use std::{fs::File, io::Read, process::Command};
+    use std::{fs::File, io::Read};
 
-    #[test]
-    fn outputs_azael_profile_correctly() {
-        let _output = Command::new("cargo")
-            .args(&["run", "azael"])
-            .output()
-            .expect("failed to execute process");
+    #[tokio::test]
+    async fn outputs_azael_profile_correctly() {
+        filmow2letterboxd::run("azael".to_string()).await;
 
         let expected_watchlist_content =
             get_file_content("./tests/resources/expected_watchlist_azael.csv");
