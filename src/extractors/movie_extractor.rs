@@ -24,7 +24,10 @@ impl MovieExtractor {
         }
 
         if director.is_none() {
-            log::error!("Could not extract director from page: {}, but continuing", url);
+            log::error!(
+                "Could not extract director from page: {}, but continuing",
+                url
+            );
         }
 
         if year.is_none() {
